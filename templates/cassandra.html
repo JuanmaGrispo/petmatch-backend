@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>PetMatch — Cassandra</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #f0f4f8; color: #222; }
+
+        /* ── Header ── */
+        header {
+            background: #0f7fa8;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        header a { color: rgba(255,255,255,.75); text-decoration: none; font-size: .9rem; }
+        header a:hover { color: white; }
+        header h1 { font-size: 1.3rem; flex: 1; }
+
+        .setup-btn {
+            background: white;
+            color: #0f7fa8;
+            border: none;
+            padding: .45rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: .85rem;
+        }
+        .setup-btn:hover { background: #e0f4fb; }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 0;
+            padding: 1.5rem 2rem 0;
+        }
+        .tab {
+            padding: .6rem 1.4rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: .9rem;
+            background: #dde8ef;
+            color: #555;
+            border: 1px solid #c8d8e2;
+            border-bottom: none;
+        }
+        .tab.active { background: white; color: #0f7fa8; }
+
+        /* ── Content ── */
+        .panel { display: none; padding: 1.5rem 2rem 3rem; }
+        .panel.active { display: block; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem; }
+
+        /* ── Card ── */
+        .card {
+            background: white;
+            border-radius: 0 8px 8px 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+            overflow: hidden;
+        }
+        .card-header {
+            background: #0f7fa8;
+            color: white;
+            padding: .6rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h3 { font-size: .9rem; font-family: monospace; }
+        .qnum { font-size: .75rem; opacity: .75; }
+        .card-body { padding: 1rem; }
+        .desc { font-size: .82rem; color: #666; margin-bottom: .75rem; }
+
+        /* ── Form ── */
+        .form-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; }
+        input, select {
+            flex: 1;
+            min-width: 0;
+            padding: .4rem .6rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: .82rem;
+            font-family: monospace;
+        }
+        input:focus, select:focus { outline: none; border-color: #0f7fa8; }
+        button.run {
+            padding: .4rem .9rem;
+            background: #0f7fa8;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: .82rem;
+            white-space: nowrap;
+        }
+        button.run:hover { background: #0a6a8f; }
+        button.post { background: #e65100; }
+        button.post:hover { background: #bf360c; }
+
+        /* ── Results ── */
+        .result { margin-top: .75rem; font-size: .8rem; }
+        .result-count { color: #888; margin-bottom: .4rem; }
+        .result table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: .75rem;
+        }
+        .result th {
+            background: #e8f4f8;
+            color: #0f7fa8;
+            text-align: left;
+            padding: .3rem .5rem;
+            border-bottom: 2px solid #c5dfe8;
+        }
+        .result td {
+            padding: .28rem .5rem;
+            border-bottom: 1px solid #eee;
+            word-break: break-all;
+        }
+        .result tr:last-child td { border-bottom: none; }
+        .result tr:hover td { background: #f5fbfd; }
+        .empty { color: #aaa; font-style: italic; }
+        .error { color: #c62828; font-size: .8rem; }
+        .ok-msg { color: #2e7d32; font-size: .82rem; font-weight: 600; }
+        .loading { color: #888; font-size: .8rem; }
+
+        /* ── Insert panel ── */
+        .insert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
+        .field-group { margin-bottom: .5rem; }
+        .field-group label { display: block; font-size: .75rem; color: #888; margin-bottom: .2rem; }
+        .field-group input, .field-group select { width: 100%; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/">← Inicio</a>
+    <h1>Cassandra — PetMatch</h1>
+    <button class="setup-btn" onclick="setup()">Crear tablas (setup)</button>
+</header>
+
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('consultas', this)">Consultas</div>
+    <div class="tab" onclick="switchTab('insertar', this)">Insertar</div>
+</div>
+
+<!-- ══════════════════ CONSULTAS ══════════════════ -->
+<div id="panel-consultas" class="panel active">
+<div class="grid">
+
+    <!-- Q1 -->
+    <div class="card">
+        <div class="card-header"><h3>eventos_por_usuario</h3><span class="qnum">Q1</span></div>
+        <div class="card-body">
+            <p class="desc">Todos los eventos de un usuario, por fecha DESC.</p>
+            <form onsubmit="query(event, 'q1')">
+                <div class="form-row">
+                    <input name="user_id" placeholder="user_id (UUID)" required>
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q1"></div>
+        </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="card">
+        <div class="card-header"><h3>eventos_por_perro</h3><span class="qnum">Q2</span></div>
+        <div class="card-body">
+            <p class="desc">Todos los eventos de un perro, por fecha DESC.</p>
+            <form onsubmit="query(event, 'q2')">
+                <div class="form-row">
+                    <input name="pet_id" placeholder="pet_id (UUID)" required>
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q2"></div>
+        </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="card">
+        <div class="card-header"><h3>eventos_por_refugio</h3><span class="qnum">Q3</span></div>
+        <div class="card-body">
+            <p class="desc">Todos los eventos de un refugio, por fecha DESC.</p>
+            <form onsubmit="query(event, 'q3')">
+                <div class="form-row">
+                    <input name="shelter_id" placeholder="shelter_id (UUID)" required>
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q3"></div>
+        </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="card">
+        <div class="card-header"><h3>eventos_por_usuario_y_perro</h3><span class="qnum">Q4</span></div>
+        <div class="card-body">
+            <p class="desc">Eventos de un usuario sobre un perro específico, por fecha DESC.</p>
+            <form onsubmit="query(event, 'q4')">
+                <div class="form-row">
+                    <input name="user_id" placeholder="user_id (UUID)" required>
+                    <input name="pet_id"  placeholder="pet_id (UUID)"  required>
+                </div>
+                <div class="form-row">
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q4"></div>
+        </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="card">
+        <div class="card-header"><h3>eventos_por_tipo</h3><span class="qnum">Q5</span></div>
+        <div class="card-body">
+            <p class="desc">Todos los eventos de un tipo, por fecha DESC.</p>
+            <form onsubmit="query(event, 'q5')">
+                <div class="form-row">
+                    <input name="event_type" placeholder="event_type (ej: adopcion)" required>
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q5"></div>
+        </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="card">
+        <div class="card-header"><h3>favoritos_por_usuario</h3><span class="qnum">Q6</span></div>
+        <div class="card-body">
+            <p class="desc">Perros favoritos de un usuario, por fecha DESC.</p>
+            <form onsubmit="query(event, 'q6')">
+                <div class="form-row">
+                    <input name="user_id" placeholder="user_id (UUID)" required>
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q6"></div>
+        </div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="card">
+        <div class="card-header"><h3>solicitudes_por_usuario</h3><span class="qnum">Q7</span></div>
+        <div class="card-body">
+            <p class="desc">Solicitudes de adopción de un usuario, por fecha DESC.</p>
+            <form onsubmit="query(event, 'q7')">
+                <div class="form-row">
+                    <input name="user_id" placeholder="user_id (UUID)" required>
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q7"></div>
+        </div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="card">
+        <div class="card-header"><h3>eventos_por_refugio_y_fecha</h3><span class="qnum">Q8</span></div>
+        <div class="card-body">
+            <p class="desc">Eventos de un refugio en un rango de fechas (range query sobre clustering key).</p>
+            <form onsubmit="query(event, 'q8')">
+                <div class="form-row">
+                    <input name="shelter_id" placeholder="shelter_id (UUID)" required>
+                </div>
+                <div class="form-row">
+                    <input name="from" type="datetime-local" required>
+                    <input name="to"   type="datetime-local" required>
+                </div>
+                <div class="form-row">
+                    <button class="run" type="submit">Ejecutar</button>
+                </div>
+            </form>
+            <div class="result" id="r-q8"></div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<!-- ══════════════════ INSERTAR ══════════════════ -->
+<div id="panel-insertar" class="panel">
+<div class="insert-grid">
+
+    <!-- INSERT evento -->
+    <div class="card">
+        <div class="card-header"><h3>Insertar evento</h3><span class="qnum">→ 6 tablas</span></div>
+        <div class="card-body">
+            <p class="desc">Escribe en todas las tablas de evento simultáneamente.</p>
+            <form onsubmit="insert(event, '/cassandra/eventos', 'ins-evento')">
+                <div class="field-group"><label>user_id</label><input name="user_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>pet_id</label><input name="pet_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>shelter_id</label><input name="shelter_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>event_type</label><input name="event_type" placeholder="ej: adopcion" required></div>
+                <div class="field-group"><label>date</label><input name="date" type="datetime-local" required></div>
+                <div class="field-group"><label>details</label><input name="details" placeholder="opcional"></div>
+                <div class="form-row" style="margin-top:.75rem">
+                    <button class="run post" type="submit">Insertar</button>
+                </div>
+            </form>
+            <div class="result" id="ins-evento"></div>
+        </div>
+    </div>
+
+    <!-- INSERT favorito -->
+    <div class="card">
+        <div class="card-header"><h3>Insertar favorito</h3><span class="qnum">→ favoritos_por_usuario</span></div>
+        <div class="card-body">
+            <form onsubmit="insert(event, '/cassandra/favoritos', 'ins-favorito')">
+                <div class="field-group"><label>user_id</label><input name="user_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>pet_id</label><input name="pet_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>shelter_id</label><input name="shelter_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>date</label><input name="date" type="datetime-local" required></div>
+                <div class="field-group"><label>details</label><input name="details" placeholder="opcional"></div>
+                <div class="form-row" style="margin-top:.75rem">
+                    <button class="run post" type="submit">Insertar</button>
+                </div>
+            </form>
+            <div class="result" id="ins-favorito"></div>
+        </div>
+    </div>
+
+    <!-- INSERT solicitud -->
+    <div class="card">
+        <div class="card-header"><h3>Insertar solicitud</h3><span class="qnum">→ solicitudes_por_usuario</span></div>
+        <div class="card-body">
+            <form onsubmit="insert(event, '/cassandra/solicitudes', 'ins-solicitud')">
+                <div class="field-group"><label>user_id</label><input name="user_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>pet_id</label><input name="pet_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>shelter_id</label><input name="shelter_id" placeholder="UUID" required></div>
+                <div class="field-group"><label>date</label><input name="date" type="datetime-local" required></div>
+                <div class="field-group"><label>status</label>
+                    <select name="status">
+                        <option value="pendiente">pendiente</option>
+                        <option value="aprobada">aprobada</option>
+                        <option value="rechazada">rechazada</option>
+                    </select>
+                </div>
+                <div class="field-group"><label>details</label><input name="details" placeholder="opcional"></div>
+                <div class="form-row" style="margin-top:.75rem">
+                    <button class="run post" type="submit">Insertar</button>
+                </div>
+            </form>
+            <div class="result" id="ins-solicitud"></div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+// ── Tab switch ──────────────────────────────────────────────────────────────
+function switchTab(name, el) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    el.classList.add('active');
+}
+
+// ── Render results as table ─────────────────────────────────────────────────
+function renderTable(data) {
+    if (!Array.isArray(data) || data.length === 0)
+        return '<span class="empty">Sin resultados</span>';
+
+    const keys = Object.keys(data[0]);
+    const ths = keys.map(k => `<th>${k}</th>`).join('');
+    const trs = data.map(row =>
+        '<tr>' + keys.map(k => `<td>${row[k] ?? ''}</td>`).join('') + '</tr>'
+    ).join('');
+
+    return `
+        <div class="result-count">${data.length} resultado${data.length !== 1 ? 's' : ''}</div>
+        <div style="overflow-x:auto">
+            <table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>
+        </div>`;
+}
+
+// ── Query handlers ──────────────────────────────────────────────────────────
+const QUERY_URLS = {
+    q1: f => `/cassandra/q1/usuarios/${f.user_id}/eventos`,
+    q2: f => `/cassandra/q2/perros/${f.pet_id}/eventos`,
+    q3: f => `/cassandra/q3/refugios/${f.shelter_id}/eventos`,
+    q4: f => `/cassandra/q4/usuarios/${f.user_id}/perros/${f.pet_id}/eventos`,
+    q5: f => `/cassandra/q5/tipos/${f.event_type}/eventos`,
+    q6: f => `/cassandra/q6/usuarios/${f.user_id}/favoritos`,
+    q7: f => `/cassandra/q7/usuarios/${f.user_id}/solicitudes`,
+    q8: f => `/cassandra/q8/refugios/${f.shelter_id}/eventos?from=${f.from}&to=${f.to}`,
+};
+
+async function query(event, qid) {
+    event.preventDefault();
+    const form = event.target;
+    const fields = Object.fromEntries(new FormData(form));
+    const resultEl = document.getElementById('r-' + qid);
+    resultEl.innerHTML = '<span class="loading">Consultando…</span>';
+    try {
+        const res = await fetch(QUERY_URLS[qid](fields));
+        const data = await res.json();
+        resultEl.innerHTML = renderTable(data);
+    } catch (e) {
+        resultEl.innerHTML = `<span class="error">Error: ${e.message}</span>`;
+    }
+}
+
+// ── Insert handler ──────────────────────────────────────────────────────────
+async function insert(event, url, resultId) {
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.target));
+    const resultEl = document.getElementById(resultId);
+    resultEl.innerHTML = '<span class="loading">Insertando…</span>';
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fields),
+        });
+        const data = await res.json();
+        resultEl.innerHTML = res.ok
+            ? `<span class="ok-msg">✓ Insertado correctamente</span>`
+            : `<span class="error">Error: ${JSON.stringify(data)}</span>`;
+    } catch (e) {
+        resultEl.innerHTML = `<span class="error">Error: ${e.message}</span>`;
+    }
+}
+
+// ── Setup ───────────────────────────────────────────────────────────────────
+async function setup() {
+    const btn = document.querySelector('.setup-btn');
+    btn.textContent = 'Creando…';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/cassandra/setup', { method: 'POST' });
+        const data = await res.json();
+        btn.textContent = '✓ Tablas creadas';
+    } catch (e) {
+        btn.textContent = 'Error';
+    }
+}
+</script>
+</body>
+</html>

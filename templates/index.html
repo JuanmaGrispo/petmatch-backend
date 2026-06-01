@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>PetMatch — DB Demo</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #f4f4f4; display: flex; flex-direction: column; align-items: center; padding: 4rem 1rem; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        p  { color: #666; margin-bottom: 3rem; }
+
+        .grid { display: grid; grid-template-columns: repeat(2, 220px); gap: 1.5rem; }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            text-decoration: none;
+            color: #222;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+
+        .card .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .card h2    { font-size: 1.1rem; margin-bottom: 0.3rem; }
+        .card span  { font-size: 0.8rem; color: #999; }
+
+        .cassandra { border-top: 4px solid #1287A8; }
+        .mongo     { border-top: 4px solid #4CAF50; }
+        .redis     { border-top: 4px solid #D93025; }
+        .neo4j     { border-top: 4px solid #018BFF; }
+    </style>
+</head>
+<body>
+    <h1>PetMatch — DB Demo</h1>
+    <p>Elegí un motor de base de datos para explorar las consultas</p>
+
+    <div class="grid">
+        <a href="/cassandra" class="card cassandra">
+            <div class="icon">🗄️</div>
+            <h2>Cassandra</h2>
+            <span>Astra DB · CQL</span>
+        </a>
+        <a href="#" class="card mongo">
+            <div class="icon">🍃</div>
+            <h2>MongoDB</h2>
+            <span>Próximamente</span>
+        </a>
+        <a href="#" class="card redis">
+            <div class="icon">⚡</div>
+            <h2>Redis</h2>
+            <span>Próximamente</span>
+        </a>
+        <a href="#" class="card neo4j">
+            <div class="icon">🔵</div>
+            <h2>Neo4j</h2>
+            <span>Próximamente</span>
+        </a>
+    </div>
+</body>
+</html>
