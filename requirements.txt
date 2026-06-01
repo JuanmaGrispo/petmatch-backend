@@ -1,3 +1,4 @@
 flask
 cassandra-driver
 python-dotenv
+Faker
