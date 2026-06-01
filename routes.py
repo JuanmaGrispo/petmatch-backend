@@ -2,8 +2,11 @@ from flask import Blueprint, render_template, jsonify, request
 from uuid import UUID, uuid4
 from datetime import datetime
 import clients.cassandra_client as cassandra
+import clients.neo4j_client as neo4j
+
 
 bp = Blueprint("main", __name__)
+
 
 
 @bp.route("/")
@@ -90,6 +93,39 @@ def q8(shelter_id):
     rows = cassandra.q8_eventos_por_refugio_y_fecha(UUID(shelter_id), date_from, date_to)
     return jsonify(rows)
 
+# ════════════════════════════════════════════════════════════════════════════
+# NEO4J
+# ════════════════════════════════════════════════════════════════════════════
+ 
+@bp.route("/api/personas/<person_id>/recomendaciones", methods=["GET"])
+def get_recomendaciones(person_id):
+    data = neo4j.recomendar_animales(person_id)
+    return jsonify({"person_id": person_id, "recomendaciones": data})
+ 
+ 
+@bp.route("/api/refugios/<nombre>/animales", methods=["GET"])
+def get_animales_refugio(nombre):
+    data = neo4j.animales_por_refugio(nombre)
+    return jsonify({"refugio": nombre, "animales": data})
+ 
+ 
+@bp.route("/api/personas/<person_id>/adopciones", methods=["GET"])
+def get_historial(person_id):
+    data = neo4j.historial_adopciones(person_id)
+    return jsonify({"person_id": person_id, "adopciones": data})
+ 
+ 
+@bp.route("/api/animales/disponibles", methods=["GET"])
+def get_disponibles():
+    data = neo4j.animales_disponibles_por_tipo()
+    return jsonify({"disponibles": data})
+ 
+ 
+@bp.route("/api/animales/<animal_id>/compatibles", methods=["GET"])
+def get_personas_compatibles(animal_id):
+    data = neo4j.personas_compatibles(animal_id)
+    return jsonify({"animal_id": animal_id, "personas": data})
+
 
 # ─── INSERT — evento (escribe en las 6 tablas de evento) ────────────────────
 
@@ -121,7 +157,6 @@ def post_favorito():
         details    = d.get("details", ""),
     )
     return jsonify({"status": "ok"}), 201
-
 
 # ─── INSERT — solicitud ──────────────────────────────────────────────────────
 
