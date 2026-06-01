@@ -7,7 +7,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; background: #f0f4f8; color: #222; }
 
-        /* ── Header ── */
         header {
             background: #018BFF;
             color: white;
@@ -20,12 +19,9 @@
         header a:hover { color: white; }
         header h1 { font-size: 1.3rem; flex: 1; }
 
-        /* ── Content ── */
         .panel { padding: 1.5rem 2rem 3rem; }
-
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem; }
 
-        /* ── Card ── */
         .card {
             background: white;
             border-radius: 8px;
@@ -45,9 +41,8 @@
         .card-body { padding: 1rem; }
         .desc { font-size: .82rem; color: #666; margin-bottom: .75rem; }
 
-        /* ── Form ── */
         .form-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; }
-        input {
+        select {
             flex: 1;
             min-width: 0;
             padding: .4rem .6rem;
@@ -55,8 +50,12 @@
             border-radius: 5px;
             font-size: .82rem;
             font-family: monospace;
+            background: white;
+            cursor: pointer;
         }
-        input:focus { outline: none; border-color: #018BFF; }
+        select:focus { outline: none; border-color: #018BFF; }
+        select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; }
+
         button.run {
             padding: .4rem .9rem;
             background: #018BFF;
@@ -69,7 +68,6 @@
         }
         button.run:hover { background: #0070d4; }
 
-        /* ── Results ── */
         .result { margin-top: .75rem; font-size: .8rem; }
         .result-count { color: #888; margin-bottom: .4rem; }
         .result table {
@@ -114,7 +112,9 @@
             <p class="desc">Animales disponibles compatibles con una persona (hasta 5).</p>
             <form onsubmit="query(event, 'q1')">
                 <div class="form-row">
-                    <input name="person_id" placeholder="person_id" required>
+                    <select name="person_id" id="sel-persona-q1" required>
+                        <option value="">Cargando personas…</option>
+                    </select>
                     <button class="run" type="submit">Ejecutar</button>
                 </div>
             </form>
@@ -126,10 +126,12 @@
     <div class="card">
         <div class="card-header"><h3>animales_por_refugio</h3><span class="qnum">Q2</span></div>
         <div class="card-body">
-            <p class="desc">Todos los animales que pertenecen a un refugio dado su nombre.</p>
+            <p class="desc">Todos los animales que pertenecen a un refugio.</p>
             <form onsubmit="query(event, 'q2')">
                 <div class="form-row">
-                    <input name="nombre" placeholder="nombre del refugio" required>
+                    <select name="nombre" id="sel-refugio-q2" required>
+                        <option value="">Cargando refugios…</option>
+                    </select>
                     <button class="run" type="submit">Ejecutar</button>
                 </div>
             </form>
@@ -144,7 +146,9 @@
             <p class="desc">Animales adoptados por una persona.</p>
             <form onsubmit="query(event, 'q3')">
                 <div class="form-row">
-                    <input name="person_id" placeholder="person_id" required>
+                    <select name="person_id" id="sel-persona-q3" required>
+                        <option value="">Cargando personas…</option>
+                    </select>
                     <button class="run" type="submit">Ejecutar</button>
                 </div>
             </form>
@@ -152,7 +156,7 @@
         </div>
     </div>
 
-    <!-- Q4: Animales disponibles por tipo -->
+    <!-- Q4: Animales disponibles por tipo (sin input) -->
     <div class="card">
         <div class="card-header"><h3>animales_disponibles_por_tipo</h3><span class="qnum">Q4</span></div>
         <div class="card-body">
@@ -173,7 +177,9 @@
             <p class="desc">Personas compatibles con un animal específico (hasta 5).</p>
             <form onsubmit="query(event, 'q5')">
                 <div class="form-row">
-                    <input name="animal_id" placeholder="animal_id" required>
+                    <select name="animal_id" id="sel-animal-q5" required>
+                        <option value="">Cargando animales…</option>
+                    </select>
                     <button class="run" type="submit">Ejecutar</button>
                 </div>
             </form>
@@ -185,6 +191,43 @@
 </div>
 
 <script>
+// ── Poblar selects al cargar ─────────────────────────────────────────────────
+async function loadSelects() {
+    try {
+        const [personas, refugios, animales] = await Promise.all([
+            fetch('/api/personas').then(r => r.json()),
+            fetch('/api/refugios').then(r => r.json()),
+            fetch('/api/animales').then(r => r.json()),
+        ]);
+
+        // Personas → Q1 y Q3
+        const personaOpts = personas.map(p =>
+            `<option value="${p.id}">${p.nombre} — ${p.id}</option>`
+        ).join('');
+        ['sel-persona-q1', 'sel-persona-q3'].forEach(id => {
+            const el = document.getElementById(id);
+            el.innerHTML = `<option value="">Elegí una persona</option>` + personaOpts;
+        });
+
+        // Refugios → Q2
+        const refugioEl = document.getElementById('sel-refugio-q2');
+        refugioEl.innerHTML = `<option value="">Elegí un refugio</option>` +
+            refugios.map(r => `<option value="${r.nombre}">${r.nombre}</option>`).join('');
+
+        // Animales → Q5
+        const animalEl = document.getElementById('sel-animal-q5');
+        animalEl.innerHTML = `<option value="">Elegí un animal</option>` +
+            animales.map(a => `<option value="${a.id}">${a.nombre} (${a.tipo}) — ${a.id}</option>`).join('');
+
+    } catch (e) {
+        console.error('Error cargando opciones:', e);
+        document.querySelectorAll('select').forEach(s => {
+            s.innerHTML = '<option value="">Error al cargar</option>';
+        });
+    }
+}
+
+// ── Render tabla ─────────────────────────────────────────────────────────────
 function renderTable(data) {
     if (!Array.isArray(data) || data.length === 0)
         return '<span class="empty">Sin resultados</span>';
@@ -202,6 +245,7 @@ function renderTable(data) {
         </div>`;
 }
 
+// ── URLs de queries ──────────────────────────────────────────────────────────
 const QUERY_URLS = {
     q1: f => `/api/personas/${f.person_id}/recomendaciones`,
     q2: f => `/api/refugios/${encodeURIComponent(f.nombre)}/animales`,
@@ -210,7 +254,6 @@ const QUERY_URLS = {
     q5: f => `/api/animales/${f.animal_id}/compatibles`,
 };
 
-// Para Q1/Q3/Q5 la respuesta viene anidada: { recomendaciones: [...] } etc.
 const RESULT_KEY = {
     q1: 'recomendaciones',
     q2: 'animales',
@@ -233,6 +276,9 @@ async function query(event, qid) {
         resultEl.innerHTML = `<span class="error">Error: ${e.message}</span>`;
     }
 }
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadSelects();
 </script>
 </body>
 </html>

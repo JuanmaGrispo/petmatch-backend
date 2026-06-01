@@ -129,6 +129,18 @@ def get_personas_compatibles(animal_id):
     data = neo4j.personas_compatibles(animal_id)
     return jsonify({"animal_id": animal_id, "personas": data})
 
+@bp.route("/api/personas", methods=["GET"])
+def get_personas():
+    return jsonify(neo4j.todas_las_personas())
+
+@bp.route("/api/refugios", methods=["GET"])
+def get_refugios():
+    return jsonify(neo4j.todos_los_refugios())
+
+@bp.route("/api/animales", methods=["GET"])
+def get_animales():
+    return jsonify(neo4j.todos_los_animales())
+
 
 # ─── INSERT — evento (escribe en las 6 tablas de evento) ────────────────────
 
