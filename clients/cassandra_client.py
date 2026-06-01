@@ -1,31 +1,67 @@
 import os
 import ssl
+import tempfile
+import zipfile
+from pathlib import Path
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from dotenv import load_dotenv
 
 load_dotenv()
 
-ASTRA_HOST = os.environ["ASTRA_HOST"]
-ASTRA_PORT = 29042
-TOKEN     = os.environ["ASTRA_TOKEN"]
-KEYSPACE  = os.environ["ASTRA_KEYSPACE"]
+BASE_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_BUNDLE = BASE_DIR / "secure-connect-petmatch.zip"
+
+ASTRA_BUNDLE_PATH = os.environ.get("ASTRA_BUNDLE_PATH", str(DEFAULT_BUNDLE))
+TOKEN             = os.environ["ASTRA_TOKEN"]
+KEYSPACE          = os.environ["ASTRA_KEYSPACE"]
 
 _session = None
+
+
+def _build_ssl_context(bundle_path: Path) -> ssl.SSLContext:
+    # Astra rechaza el handshake TLS 1.3 sobre LibreSSL (macOS), así que
+    # forzamos TLS 1.2 leyendo los certs directamente del bundle.
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        with zipfile.ZipFile(bundle_path) as zf:
+            zf.extractall(tmp_path)
+
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        ssl_ctx.maximum_version = ssl.TLSVersion.TLSv1_2
+        ssl_ctx.load_verify_locations(cafile=str(tmp_path / "ca.crt"))
+        ssl_ctx.verify_mode = ssl.CERT_REQUIRED
+        # Astra usa SNI-based routing: el SNI es el host_id (UUID) del nodo,
+        # que no coincide con el CN del certificado. La cadena se sigue
+        # validando contra la CA del bundle, así que es seguro.
+        ssl_ctx.check_hostname = False
+        ssl_ctx.load_cert_chain(
+            certfile=str(tmp_path / "cert"),
+            keyfile=str(tmp_path / "key"),
+        )
+        return ssl_ctx
+
 
 def get_session():
     global _session
     if _session is None:
-        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+        bundle_path = Path(ASTRA_BUNDLE_PATH)
+        if not bundle_path.exists():
+            raise FileNotFoundError(
+                f"No se encontró el Secure Connect Bundle en {bundle_path}. "
+                "Definí ASTRA_BUNDLE_PATH en .env o dejá el archivo "
+                "secure-connect-petmatch.zip en la raíz del proyecto."
+            )
 
+        cloud_config = {
+            "secure_connect_bundle": str(bundle_path),
+            "ssl_context": _build_ssl_context(bundle_path),
+        }
         auth_provider = PlainTextAuthProvider("token", TOKEN)
         cluster = Cluster(
-            contact_points=[ASTRA_HOST],
-            port=ASTRA_PORT,
+            cloud=cloud_config,
             auth_provider=auth_provider,
-            ssl_context=ssl_ctx,
         )
         _session = cluster.connect(KEYSPACE)
     return _session
@@ -192,6 +228,50 @@ def insert_solicitud(user_id, event_id, pet_id, shelter_id, date, status, detail
         INSERT INTO solicitudes_por_usuario (user_id, date, event_id, pet_id, shelter_id, status, details)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (user_id, date, event_id, pet_id, shelter_id, status, details))
+
+
+# ─── Mantenimiento ──────────────────────────────────────────────────────────
+
+ALL_TABLES = [
+    "eventos_por_usuario",
+    "eventos_por_perro",
+    "eventos_por_refugio",
+    "eventos_por_usuario_y_perro",
+    "eventos_por_tipo",
+    "favoritos_por_usuario",
+    "solicitudes_por_usuario",
+    "eventos_por_refugio_y_fecha",
+]
+
+
+def truncate_tables():
+    """Borra el contenido de las 8 tablas (sin DROP). Operación irreversible."""
+    s = get_session()
+    for table in ALL_TABLES:
+        s.execute(f"TRUNCATE {table}")
+
+
+def get_sample_ids(limit_users: int = 30, limit_pets: int = 50, limit_shelters: int = 10):
+    """
+    Devuelve UUIDs reales sembrados, para poblar los dropdowns de la UI.
+    Usa `SELECT DISTINCT <partition_key>` (Cassandra solo permite DISTINCT
+    sobre la partition key completa).
+    """
+    s = get_session()
+
+    users = [
+        str(r.user_id)
+        for r in s.execute(f"SELECT DISTINCT user_id FROM eventos_por_usuario LIMIT {limit_users}")
+    ]
+    pets = [
+        str(r.pet_id)
+        for r in s.execute(f"SELECT DISTINCT pet_id FROM eventos_por_perro LIMIT {limit_pets}")
+    ]
+    shelters = [
+        str(r.shelter_id)
+        for r in s.execute(f"SELECT DISTINCT shelter_id FROM eventos_por_refugio LIMIT {limit_shelters}")
+    ]
+    return {"users": users, "pets": pets, "shelters": shelters}
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
