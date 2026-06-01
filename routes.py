@@ -3,9 +3,12 @@ from uuid import UUID, uuid4
 from datetime import datetime
 import clients.cassandra_client as cassandra
 import clients.neo4j_client as neo4j
+import seeder
 
 
 bp = Blueprint("main", __name__)
+
+SEED_CONFIRM_PHRASE = "BORRAR Y SEMBRAR"
 
 
 
@@ -22,12 +25,28 @@ def cassandra_home():
 def neo4j_home():
     return render_template("neo4j.html")
 
-# ─── Setup ──────────────────────────────────────────────────────────────────
+# ─── Samples (poblar dropdowns de la UI) ────────────────────────────────────
 
-@bp.route("/cassandra/setup", methods=["POST"])
-def setup():
-    cassandra.create_tables()
-    return jsonify({"status": "tablas creadas"})
+@bp.route("/cassandra/samples", methods=["GET"])
+def samples():
+    return jsonify(cassandra.get_sample_ids())
+
+
+# ─── Seed (acción destructiva, triple confirmación) ─────────────────────────
+
+@bp.route("/cassandra/seed", methods=["POST"])
+def seed():
+    payload = request.get_json(silent=True) or {}
+    confirm = payload.get("confirm", "")
+    if confirm != SEED_CONFIRM_PHRASE:
+        return jsonify({
+            "error": "confirmación inválida",
+            "expected": SEED_CONFIRM_PHRASE,
+        }), 400
+
+    n = int(payload.get("n", 2000))
+    summary = seeder.run(n_events=n, truncate=True)
+    return jsonify({"status": "ok", "summary": summary})
 
 
 # ─── Q1 — eventos de un usuario ─────────────────────────────────────────────
