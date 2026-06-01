@@ -18,6 +18,9 @@ def index():
 def cassandra_home():
     return render_template("cassandra.html")
 
+@bp.route("/neo4j")
+def neo4j_home():
+    return render_template("neo4j.html")
 
 # ─── Setup ──────────────────────────────────────────────────────────────────
 
