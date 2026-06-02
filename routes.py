@@ -1,9 +1,19 @@
 from flask import Blueprint, render_template, jsonify, request
 from uuid import UUID, uuid4
 from datetime import datetime
-import clients.cassandra_client as cassandra
+try:
+    import clients.cassandra_client as cassandra
+except Exception as e:
+    print(f"[WARN] Cassandra deshabilitado: {e}")
+    cassandra = None
+
+try:
+    import seeder
+except Exception as e:
+    print(f"[WARN] Seeder deshabilitado: {e}")
+    seeder = None
 import clients.neo4j_client as neo4j
-import seeder
+import clients.redis_client as redis_client
 
 
 bp = Blueprint("main", __name__)
@@ -20,6 +30,10 @@ def index():
 @bp.route("/cassandra")
 def cassandra_home():
     return render_template("cassandra.html")
+
+@bp.route("/redis")
+def redis_home():
+    return render_template("redis.html")
 
 @bp.route("/neo4j")
 def neo4j_home():
@@ -207,3 +221,169 @@ def post_solicitud():
         details    = d.get("details", ""),
     )
     return jsonify({"status": "ok"}), 201
+
+# ============================================================
+# REDIS - SESIONES
+# ============================================================
+
+@bp.route("/redis/sesiones", methods=["POST"])
+def crear_sesion():
+    d = request.json
+
+    resultado = redis_client.crear_sesion(
+        person_id=d["person_id"],
+        nombre=d["nombre"],
+        apellido=d["apellido"],
+        email=d["email"],
+        rol=d.get("rol", "adoptante")
+    )
+
+    return jsonify(resultado), 201
+
+
+@bp.route("/redis/sesiones/<person_id>", methods=["GET"])
+def obtener_sesion(person_id):
+    sesion = redis_client.obtener_sesion(person_id)
+
+    if not sesion:
+        return jsonify({"error": "sesión no encontrada"}), 404
+
+    return jsonify(sesion)
+
+
+@bp.route("/redis/sesiones/<person_id>", methods=["PATCH"])
+def actualizar_sesion(person_id):
+    d = request.json
+
+    ok = redis_client.actualizar_campo(
+        person_id,
+        d["campo"],
+        d["valor"]
+    )
+
+    if not ok:
+        return jsonify({"error": "sesión no encontrada"}), 404
+
+    return jsonify({"status": "ok"})
+
+
+@bp.route("/redis/sesiones/<person_id>/renovar", methods=["POST"])
+def renovar_sesion(person_id):
+    ok = redis_client.renovar_sesion(person_id)
+
+    if not ok:
+        return jsonify({"error": "sesión no encontrada"}), 404
+
+    return jsonify({"status": "ok"})
+
+
+@bp.route("/redis/sesiones/<person_id>", methods=["DELETE"])
+def cerrar_sesion(person_id):
+    ok = redis_client.cerrar_sesion(person_id)
+
+    if not ok:
+        return jsonify({"error": "sesión no encontrada"}), 404
+
+    return jsonify({"status": "ok"})
+
+# ============================================================
+# REDIS - NOTIFICACIONES
+# ============================================================
+
+@bp.route("/redis/notificaciones", methods=["POST"])
+def crear_notificacion():
+    d = request.json
+
+    redis_client.encolar_notificacion(
+        d["person_id"],
+        d["mensaje"]
+    )
+
+    return jsonify({"status": "ok"}), 201
+
+
+@bp.route("/redis/notificaciones/<person_id>", methods=["GET"])
+def listar_notificaciones(person_id):
+    return jsonify(
+        redis_client.listar_notificaciones(person_id)
+    )
+
+
+@bp.route("/redis/notificaciones/<person_id>/count", methods=["GET"])
+def contar_notificaciones(person_id):
+    return jsonify({
+        "cantidad": redis_client.contar_notificaciones(person_id)
+    })
+
+
+@bp.route("/redis/notificaciones/<person_id>/consume", methods=["POST"])
+def consumir_notificacion(person_id):
+    msg = redis_client.consumir_notificacion(person_id)
+
+    return jsonify({
+        "mensaje": msg
+    })
+
+
+@bp.route("/redis/notificaciones/<person_id>/consume-all", methods=["POST"])
+def consumir_todas(person_id):
+    return jsonify(
+        redis_client.consumir_todas(person_id)
+    )
+
+# ============================================================
+# REDIS - RANKING
+# ============================================================
+
+@bp.route("/redis/animales", methods=["POST"])
+def inicializar_animal():
+    d = request.json
+
+    redis_client.inicializar_animal(
+        animal_id=d["animal_id"],
+        nombre=d["nombre"],
+        visitas_historicas=d.get("visitas_historicas", 0),
+        visitas_hoy=d.get("visitas_hoy", 0)
+    )
+
+    return jsonify({"status": "ok"}), 201
+
+
+@bp.route("/redis/visitas", methods=["POST"])
+def registrar_visita():
+    d = request.json
+
+    resultado = redis_client.registrar_visita(
+        animal_id=d["animal_id"],
+        nombre=d["nombre"]
+    )
+
+    return jsonify(resultado)
+
+
+@bp.route("/redis/ranking", methods=["GET"])
+def ranking():
+    top = int(request.args.get("top", 10))
+
+    return jsonify(
+        redis_client.obtener_ranking(top)
+    )
+
+
+@bp.route("/redis/ranking/<nombre>", methods=["GET"])
+def posicion(nombre):
+    resultado = redis_client.obtener_posicion(nombre)
+
+    if resultado is None:
+        return jsonify({"error": "animal no encontrado"}), 404
+
+    return jsonify(resultado)
+
+
+@bp.route("/redis/visitas/<animal_id>", methods=["GET"])
+def visitas_hoy(animal_id):
+    return jsonify({
+        "visitas_hoy":
+            redis_client.obtener_visitas_hoy(animal_id)
+    })
+

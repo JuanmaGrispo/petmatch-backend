@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redis — PetMatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:       #E63B2E;
+    --red-dim:   #8B1C14;
+    --red-glow:  rgba(230,59,46,0.25);
+    --bg:        #0A0A0A;
+    --surface:   #111111;
+    --surface2:  #1A1A1A;
+    --border:    #2A2A2A;
+    --text:      #F0EDE8;
+    --muted:     #666;
+    --green:     #2ECC71;
+    --amber:     #F39C12;
+    --mono:      'Space Mono', monospace;
+    --sans:      'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 32px; height: 60px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 12px var(--red);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  header h1 span { color: var(--red); }
+
+  .header-badge {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 6px;
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  /* ── NAV TABS ── */
+  nav {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    background: var(--surface);
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 14px 24px;
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    transition: all .2s;
+    position: relative;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--red);
+    border-bottom-color: var(--red);
+  }
+  .tab .tab-icon { margin-right: 8px; font-style: normal; }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    min-height: calc(100vh - 113px);
+    position: relative; z-index: 1;
+  }
+
+  /* ── PANELS ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .work-area {
+    padding: 32px;
+    border-right: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: #444; }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: var(--surface2);
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+  }
+
+  /* ── FORM ELEMENTS ── */
+  .field-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .field-row.single { grid-template-columns: 1fr; }
+  .field-row.two    { grid-template-columns: 1fr 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .field input, .field select, .field textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 9px 11px;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus { border-color: var(--red); }
+  .field input::placeholder { color: #3a3a3a; }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .field select option { background: #1a1a1a; }
+
+  /* ── BUTTONS ── */
+  .btn-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 4px;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .5px;
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--red);
+    border-color: var(--red);
+    color: white;
+  }
+  .btn-primary:hover {
+    background: #ff4538;
+    box-shadow: 0 0 16px var(--red-glow);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+  }
+  .btn-ghost:hover {
+    background: var(--surface2);
+    border-color: #444;
+  }
+  .btn-danger {
+    background: transparent;
+    border-color: var(--red-dim);
+    color: var(--red);
+  }
+  .btn-danger:hover {
+    background: rgba(230,59,46,.1);
+    border-color: var(--red);
+  }
+  .btn:disabled {
+    opacity: .4; cursor: not-allowed;
+  }
+  .btn.loading::before {
+    content: '';
+    width: 10px; height: 10px;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* ── RIGHT PANEL — RESULT ── */
+  .result-pane {
+    display: flex; flex-direction: column;
+    position: sticky; top: 113px;
+    height: calc(100vh - 113px);
+    overflow: hidden;
+  }
+
+  .result-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .result-header span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  #result-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+  #result-status.ok      { background: rgba(46,204,113,.15); color: var(--green); border: 1px solid rgba(46,204,113,.3); }
+  #result-status.error   { background: rgba(230,59,46,.15);  color: var(--red);   border: 1px solid rgba(230,59,46,.3); }
+  #result-status.waiting { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+  .result-body {
+    flex: 1; overflow-y: auto;
+    padding: 20px 24px;
+  }
+
+  /* ── RENDERED OUTPUTS ── */
+  .result-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100%; gap: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: center;
+  }
+  .result-empty .icon { font-size: 36px; opacity: .3; }
+
+  /* session card */
+  .session-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .session-card-header {
+    background: rgba(230,59,46,.08);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .session-avatar {
+    width: 32px; height: 32px;
+    background: var(--red);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: white;
+  }
+  .session-name { font-weight: 600; font-size: 14px; }
+  .session-role { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .session-fields { padding: 12px 16px; display: grid; gap: 8px; }
+  .session-field { display: flex; justify-content: space-between; align-items: center; }
+  .session-field-key { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .session-field-val { font-family: var(--mono); font-size: 11px; }
+  .ttl-bar-wrap { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .ttl-label { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .ttl-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .ttl-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .5s; }
+  .badge-active   { background: rgba(46,204,113,.15); color: var(--green); border: 1px solid rgba(46,204,113,.3); border-radius: 3px; padding: 1px 7px; font-family: var(--mono); font-size: 10px; }
+  .badge-inactive { background: rgba(230,59,46,.1);   color: var(--red);   border: 1px solid rgba(230,59,46,.3);  border-radius: 3px; padding: 1px 7px; font-family: var(--mono); font-size: 10px; }
+
+  /* notifications list */
+  .notif-list { display: flex; flex-direction: column; gap: 8px; }
+  .notif-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    border-radius: 5px;
+    padding: 10px 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .notif-item .notif-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .notif-item .notif-text { font-size: 12px; line-height: 1.5; }
+  .notif-item .notif-idx  { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
+  .notif-empty { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: center; padding: 20px 0; }
+
+  /* ranking table */
+  .ranking-wrap { overflow: hidden; border-radius: 8px; border: 1px solid var(--border); }
+  .ranking-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 80px 80px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    transition: background .15s;
+  }
+  .ranking-row:hover { background: var(--surface2); }
+  .ranking-row:last-child { border-bottom: none; }
+  .ranking-row.header {
+    background: var(--surface2);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: default;
+  }
+  .rank-pos { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+  .rank-pos.gold   { color: #F1C40F; }
+  .rank-pos.silver { color: #BDC3C7; }
+  .rank-pos.bronze { color: #CD7F32; }
+  .rank-name { font-size: 13px; font-weight: 600; }
+  .rank-score { font-family: var(--mono); font-size: 12px; text-align: right; }
+  .rank-bar-cell { padding-right: 4px; }
+  .rank-bar { height: 3px; background: var(--red); border-radius: 2px; transition: width .5s; }
+
+  /* single result */
+  .result-kv { display: flex; flex-direction: column; gap: 10px; }
+  .result-kv-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; }
+  .result-kv-key { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .result-kv-val { font-family: var(--mono); font-size: 12px; font-weight: 700; }
+
+  /* raw json fallback */
+  .raw-json {
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+    color: #ccc;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .raw-json .key   { color: #e06c75; }
+  .raw-json .str   { color: #98c379; }
+  .raw-json .num   { color: #d19a66; }
+  .raw-json .bool  { color: #61afef; }
+  .raw-json .null  { color: #abb2bf; }
+
+  /* toast */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    z-index: 9999;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: rgba(46,204,113,.4); color: var(--green); }
+  #toast.fail    { border-color: rgba(230,59,46,.4);  color: var(--red); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-dot"></div>
+  <h1>PetMatch — <span>Redis</span></h1>
+  <span class="header-badge"><span class="status-dot"></span>127.0.0.1:6379</span>
+</header>
+
+<nav>
+  <button class="tab active" onclick="switchTab('sesiones')" id="tab-sesiones">
+    <i class="tab-icon">👤</i>Sesiones
+  </button>
+  <button class="tab" onclick="switchTab('notificaciones')" id="tab-notificaciones">
+    <i class="tab-icon">🔔</i>Notificaciones
+  </button>
+  <button class="tab" onclick="switchTab('ranking')" id="tab-ranking">
+    <i class="tab-icon">🏆</i>Ranking
+  </button>
+</nav>
+
+<main>
+  <div id="content-area">
+
+    <!-- ══════════════════════════════════════════════ SESIONES -->
+    <div class="panel active" id="panel-sesiones">
+      <div class="work-area">
+
+        <p class="panel-title">Gestión de sesiones · Hash · TTL 30 min</p>
+
+        <!-- CREAR -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Crear sesión <span class="badge">HSET</span></span>
+          </div>
+          <div class="field-row two">
+            <div class="field">
+              <label>Person ID</label>
+              <input id="s_person_id" placeholder="P00001">
+            </div>
+            <div class="field">
+              <label>Rol</label>
+              <select id="s_rol">
+                <option value="adoptante">Adoptante</option>
+                <option value="admin">Admin</option>
+                <option value="staff">Staff</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Nombre</label>
+              <input id="s_nombre" placeholder="Martina">
+            </div>
+            <div class="field">
+              <label>Apellido</label>
+              <input id="s_apellido" placeholder="Rodríguez">
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input id="s_email" placeholder="martina@gmail.com">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="crearSesion()">⚡ Crear sesión</button>
+          </div>
+        </div>
+
+        <!-- CONSULTAR / GESTIONAR -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Consultar y gestionar</span>
+          </div>
+          <div class="field-row single">
+            <div class="field">
+              <label>Person ID</label>
+              <input id="s_id_query" placeholder="P00001" oninput="syncPersonId(this.value)">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="obtenerSesion()">🔍 Ver sesión</button>
+            <button class="btn btn-ghost" onclick="renovarSesion()">🔄 Renovar TTL</button>
+            <button class="btn btn-danger" onclick="cerrarSesion()">✕ Cerrar sesión</button>
+          </div>
+        </div>
+
+        <!-- ACTUALIZAR CAMPO -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Actualizar campo <span class="badge">HSET patch</span></span>
+          </div>
+          <div class="field-row two">
+            <div class="field">
+              <label>Campo</label>
+              <select id="campo">
+                <option value="activo">activo</option>
+                <option value="nombre">nombre</option>
+                <option value="apellido">apellido</option>
+                <option value="email">email</option>
+                <option value="rol">rol</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Nuevo valor</label>
+              <input id="valor" placeholder="false">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="actualizarSesion()">✏️ Actualizar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ NOTIFICACIONES -->
+    <div class="panel" id="panel-notificaciones">
+      <div class="work-area">
+
+        <p class="panel-title">Cola de notificaciones · List · FIFO</p>
+
+        <!-- ENCOLAR -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Encolar notificación <span class="badge">RPUSH</span></span>
+          </div>
+          <div class="field-row two">
+            <div class="field">
+              <label>Person ID</label>
+              <input id="n_person_id" placeholder="P00001">
+            </div>
+            <div class="field">
+              <label>Plantilla rápida</label>
+              <select id="n_template" onchange="applyTemplate()">
+                <option value="">— escribir mensaje —</option>
+                <option value="Tu solicitud para adoptar fue aprobada ✅">Adopción aprobada</option>
+                <option value="Nuevo animal compatible con tu perfil 🐾">Animal compatible</option>
+                <option value="Tu sesión está por expirar ⏳">Sesión por expirar</option>
+                <option value="Recordatorio: completá tu perfil de adoptante">Completar perfil</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row single">
+            <div class="field">
+              <label>Mensaje</label>
+              <textarea id="mensaje" placeholder="Escribí el mensaje de la notificación..."></textarea>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="crearNotificacion()">📤 Encolar</button>
+          </div>
+        </div>
+
+        <!-- CONSULTAR COLA -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Consultar cola</span>
+          </div>
+          <div class="field-row single">
+            <div class="field">
+              <label>Person ID</label>
+              <input id="n_id_query" placeholder="P00001">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="listarNotificaciones()">📋 Ver todas</button>
+            <button class="btn btn-ghost" onclick="contarNotificaciones()">🔢 Contar</button>
+            <button class="btn btn-ghost" onclick="consumirNotificacion()">📥 Consumir una</button>
+            <button class="btn btn-danger" onclick="consumirTodas()">🗑 Vaciar cola</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ RANKING -->
+    <div class="panel" id="panel-ranking">
+      <div class="work-area">
+
+        <p class="panel-title">Ranking de animales · Sorted Set + String</p>
+
+        <!-- VER RANKING -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Top animales <span class="badge">ZREVRANGE</span></span>
+          </div>
+          <div class="field-row single">
+            <div class="field">
+              <label>Mostrar top</label>
+              <select id="top_n">
+                <option value="5">Top 5</option>
+                <option value="10" selected>Top 10</option>
+                <option value="20">Top 20</option>
+                <option value="50">Top 50</option>
+              </select>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="obtenerRanking()">🏆 Ver ranking</button>
+          </div>
+        </div>
+
+        <!-- REGISTRAR VISITA -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Registrar visita <span class="badge">ZINCRBY + INCR</span></span>
+          </div>
+          <div class="field-row two">
+            <div class="field">
+              <label>Animal ID</label>
+              <input id="animal_id" placeholder="A684346">
+            </div>
+            <div class="field">
+              <label>Nombre</label>
+              <input id="animal_nombre" placeholder="Max">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="registrarVisita()">👁 Registrar visita</button>
+            <button class="btn btn-ghost" onclick="obtenerPosicion()">📍 Ver posición</button>
+            <button class="btn btn-ghost" onclick="obtenerVisitasHoy()">📅 Visitas hoy</button>
+          </div>
+        </div>
+
+        <!-- INICIALIZAR ANIMAL -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Inicializar animal <span class="badge">ZADD + SET</span></span>
+          </div>
+          <div class="field-row two">
+            <div class="field">
+              <label>Animal ID</label>
+              <input id="init_animal_id" placeholder="A123456">
+            </div>
+            <div class="field">
+              <label>Nombre</label>
+              <input id="init_animal_nombre" placeholder="Rocky">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="inicializarAnimal()">➕ Inicializar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════ RESULT PANE -->
+  <div class="result-pane">
+    <div class="result-header">
+      <span>resultado</span>
+      <span id="result-status" class="waiting">—</span>
+    </div>
+    <div class="result-body" id="result-body">
+      <div class="result-empty">
+        <div class="icon">⚡</div>
+        <div>Ejecutá una operación<br>para ver el resultado</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ────────────────────────────────────────────────────
+// TAB ROUTING
+// ────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+function syncPersonId(val) {
+  // keep main ID synced for patch form
+}
+
+// ────────────────────────────────────────────────────
+// TEMPLATE HELPER
+// ────────────────────────────────────────────────────
+function applyTemplate() {
+  const v = document.getElementById('n_template').value;
+  if (v) document.getElementById('mensaje').value = v;
+}
+
+// ────────────────────────────────────────────────────
+// STATUS + TOAST
+// ────────────────────────────────────────────────────
+function setStatus(ok) {
+  const el = document.getElementById('result-status');
+  el.textContent = ok ? '200 OK' : 'ERROR';
+  el.className = ok ? 'ok' : 'error';
+}
+
+function toast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (ok ? 'success' : 'fail');
+  setTimeout(() => { t.className = ''; }, 2500);
+}
+
+// ────────────────────────────────────────────────────
+// RENDER HELPERS
+// ────────────────────────────────────────────────────
+function renderSession(data) {
+  if (data.error) return renderError(data.error);
+  const activo = data.activo === 'true' || data.activo === true;
+  const ttl = parseInt(data.ttl) || 0;
+  const ttlPct = Math.min(100, (ttl / 1800) * 100);
+  const initials = ((data.nombre||'?')[0] + (data.apellido||'?')[0]).toUpperCase();
+  return `
+    <div class="session-card">
+      <div class="session-card-header">
+        <div class="session-avatar">${initials}</div>
+        <div>
+          <div class="session-name">${data.nombre || ''} ${data.apellido || ''}</div>
+          <div class="session-role">${data.rol || ''} · ${data.person_id || ''}</div>
+        </div>
+        <div style="margin-left:auto">${activo
+          ? '<span class="badge-active">● activo</span>'
+          : '<span class="badge-inactive">● inactivo</span>'}</div>
+      </div>
+      <div class="session-fields">
+        <div class="session-field">
+          <span class="session-field-key">email</span>
+          <span class="session-field-val">${data.email || '—'}</span>
+        </div>
+        <div class="session-field">
+          <span class="session-field-key">inicio</span>
+          <span class="session-field-val">${data.inicio || '—'}</span>
+        </div>
+      </div>
+      ${ttl > 0 ? `
+      <div class="ttl-bar-wrap">
+        <div class="ttl-label">
+          <span>TTL restante</span>
+          <span>${ttl}s / 1800s</span>
+        </div>
+        <div class="ttl-bar"><div class="ttl-fill" style="width:${ttlPct}%"></div></div>
+      </div>` : ''}
+    </div>`;
+}
+
+function renderNotifications(data) {
+  const items = Array.isArray(data) ? data : (data.notificaciones || data.mensajes || []);
+  if (!items.length) return '<div class="notif-empty">Cola vacía ✓</div>';
+  return `<div class="notif-list">${items.map((msg, i) => `
+    <div class="notif-item">
+      <span class="notif-icon">🔔</span>
+      <span class="notif-text">${msg}</span>
+      <span class="notif-idx">#${i+1}</span>
+    </div>`).join('')}</div>`;
+}
+
+function renderRanking(data) {
+  const items = Array.isArray(data) ? data : (data.ranking || []);
+  if (!items.length) return '<div class="notif-empty">Ranking vacío</div>';
+  const max = parseFloat(items[0]?.visitas_historicas || items[0]?.score || 1);
+  const medals = ['gold','silver','bronze'];
+  return `<div class="ranking-wrap">
+    <div class="ranking-row header">
+      <span>#</span><span>Animal</span><span>Score</span><span>Barra</span>
+    </div>
+    ${items.map((item, i) => {
+      const name  = item.nombre || item.name || item[0] || '—';
+      const score = item.visitas_historicas || item.score || item[1] || 0;
+      const pct   = Math.round((parseFloat(score)/max)*100);
+      return `<div class="ranking-row">
+        <span class="rank-pos ${medals[i]||''}">${i+1}</span>
+        <span class="rank-name">${name}</span>
+        <span class="rank-score">${score}</span>
+        <div class="rank-bar-cell"><div class="rank-bar" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderKV(data) {
+  const entries = Object.entries(data);
+  return `<div class="result-kv">${entries.map(([k,v]) =>
+    `<div class="result-kv-item">
+      <span class="result-kv-key">${k}</span>
+      <span class="result-kv-val">${v}</span>
+    </div>`).join('')}</div>`;
+}
+
+function syntaxHighlight(json) {
+  return json
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+      if (/^"/.test(m))  return /:$/.test(m) ? `<span class="key">${m}</span>` : `<span class="str">${m}</span>`;
+      if (/true|false/.test(m)) return `<span class="bool">${m}</span>`;
+      if (/null/.test(m)) return `<span class="null">${m}</span>`;
+      return `<span class="num">${m}</span>`;
+    });
+}
+
+function renderError(msg) {
+  return `<div class="result-kv"><div class="result-kv-item" style="border-color:rgba(230,59,46,.3)">
+    <span class="result-kv-key">error</span>
+    <span class="result-kv-val" style="color:var(--red)">${msg}</span>
+  </div></div>`;
+}
+
+function render(data, hint) {
+  const body = document.getElementById('result-body');
+  try {
+    if (hint === 'session') { body.innerHTML = renderSession(data); return; }
+    if (hint === 'notifications') { body.innerHTML = renderNotifications(data); return; }
+    if (hint === 'ranking') { body.innerHTML = renderRanking(data); return; }
+    if (data.error) { body.innerHTML = renderError(data.error); return; }
+    if (typeof data === 'object' && !Array.isArray(data)) { body.innerHTML = renderKV(data); return; }
+    if (Array.isArray(data)) {
+      if (data.length && typeof data[0] === 'string') { body.innerHTML = renderNotifications(data); return; }
+      body.innerHTML = `<div class="raw-json">${syntaxHighlight(JSON.stringify(data, null, 2))}</div>`;
+      return;
+    }
+    body.innerHTML = `<div class="raw-json">${syntaxHighlight(JSON.stringify(data, null, 2))}</div>`;
+  } catch(e) {
+    body.innerHTML = `<div class="raw-json">${JSON.stringify(data, null, 2)}</div>`;
+  }
+}
+
+// ────────────────────────────────────────────────────
+// API HELPER
+// ────────────────────────────────────────────────────
+async function api(method, url, body, hint) {
+  const opts = { method, headers: {} };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  try {
+    const r = await fetch(url, opts);
+    const data = await r.json();
+    setStatus(r.ok);
+    render(data, hint);
+    if (r.ok) toast('✓ Operación exitosa');
+    else toast(data.error || 'Error en la operación', false);
+    return data;
+  } catch(e) {
+    setStatus(false);
+    render({ error: e.message }, null);
+    toast('Error de conexión', false);
+  }
+}
+
+// ────────────────────────────────────────────────────
+// SESIONES
+// ────────────────────────────────────────────────────
+function crearSesion() {
+  api('POST', '/redis/sesiones', {
+    person_id: v('s_person_id'),
+    nombre:    v('s_nombre'),
+    apellido:  v('s_apellido'),
+    email:     v('s_email'),
+    rol:       document.getElementById('s_rol').value
+  }, 'session');
+}
+
+function obtenerSesion() {
+  const id = v('s_id_query');
+  if (!id) return toast('Ingresá un Person ID', false);
+  api('GET', `/redis/sesiones/${id}`, null, 'session');
+}
+
+function renovarSesion() {
+  const id = v('s_id_query');
+  if (!id) return toast('Ingresá un Person ID', false);
+  api('POST', `/redis/sesiones/${id}/renovar`, null, null);
+}
+
+function cerrarSesion() {
+  const id = v('s_id_query');
+  if (!id) return toast('Ingresá un Person ID', false);
+  if (!confirm(`¿Cerrar sesión de ${id}?`)) return;
+  api('DELETE', `/redis/sesiones/${id}`, null, null);
+}
+
+function actualizarSesion() {
+  const id = v('s_id_query');
+  if (!id) return toast('Ingresá un Person ID en "Consultar y gestionar"', false);
+  api('PATCH', `/redis/sesiones/${id}`, {
+    campo: document.getElementById('campo').value,
+    valor: v('valor')
+  }, null);
+}
+
+// ────────────────────────────────────────────────────
+// NOTIFICACIONES
+// ────────────────────────────────────────────────────
+function crearNotificacion() {
+  api('POST', '/redis/notificaciones', {
+    person_id: v('n_person_id'),
+    mensaje:   v('mensaje')
+  }, null);
+}
+
+function listarNotificaciones() {
+  const id = v('n_id_query');
+  if (!id) return toast('Ingresá un Person ID', false);
+  api('GET', `/redis/notificaciones/${id}`, null, 'notifications');
+}
+
+function contarNotificaciones() {
+  const id = v('n_id_query');
+  if (!id) return toast('Ingresá un Person ID', false);
+  api('GET', `/redis/notificaciones/${id}/count`, null, null);
+}
+
+function consumirNotificacion() {
+  const id = v('n_id_query');
+  if (!id) return toast('Ingresá un Person ID', false);
+  api('POST', `/redis/notificaciones/${id}/consume`, null, null);
+}
+
+function consumirTodas() {
+  const id = v('n_id_query');
+  if (!id) return toast('Ingresá un Person ID', false);
+  if (!confirm(`¿Vaciar toda la cola de ${id}?`)) return;
+  api('POST', `/redis/notificaciones/${id}/consume-all`, null, 'notifications');
+}
+
+// ────────────────────────────────────────────────────
+// RANKING
+// ────────────────────────────────────────────────────
+function obtenerRanking() {
+  const top = document.getElementById('top_n').value;
+  api('GET', `/redis/ranking?top=${top}`, null, 'ranking');
+}
+
+function registrarVisita() {
+  api('POST', '/redis/visitas', {
+    animal_id: v('animal_id'),
+    nombre:    v('animal_nombre')
+  }, null);
+}
+
+function obtenerPosicion() {
+  const nombre = v('animal_nombre');
+  if (!nombre) return toast('Ingresá el nombre del animal', false);
+  api('GET', `/redis/ranking/${encodeURIComponent(nombre)}`, null, null);
+}
+
+function obtenerVisitasHoy() {
+  const id = v('animal_id');
+  if (!id) return toast('Ingresá un Animal ID', false);
+  api('GET', `/redis/visitas/${id}`, null, null);
+}
+
+function inicializarAnimal() {
+  api('POST', '/redis/animales', {
+    animal_id: v('init_animal_id'),
+    nombre:    v('init_animal_nombre')
+  }, null);
+}
+
+// ────────────────────────────────────────────────────
+// UTIL
+// ────────────────────────────────────────────────────
+function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
+</script>
+</body>
+</html>
