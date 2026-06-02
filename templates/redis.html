@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Redis - PetMatch</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    margin:40px;
+    background:#f4f4f4;
+}
+
+h1{
+    text-align:center;
+}
+
+.section{
+    background:white;
+    padding:20px;
+    margin-bottom:20px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+}
+
+input{
+    display:block;
+    width:100%;
+    padding:8px;
+    margin-bottom:10px;
+}
+
+button{
+    padding:10px;
+    margin-right:10px;
+    cursor:pointer;
+}
+
+pre{
+    background:#222;
+    color:#0f0;
+    padding:15px;
+    overflow:auto;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Redis - PetMatch</h1>
+
+<!-- ===================================================== -->
+<!-- SESIONES -->
+<!-- ===================================================== -->
+
+<div class="section">
+<h2>Sesiones</h2>
+
+<input id="s_person_id" placeholder="Person ID">
+<input id="s_nombre" placeholder="Nombre">
+<input id="s_apellido" placeholder="Apellido">
+<input id="s_email" placeholder="Email">
+<input id="s_rol" placeholder="Rol">
+
+<button onclick="crearSesion()">Crear Sesión</button>
+<button onclick="obtenerSesion()">Obtener Sesión</button>
+<button onclick="renovarSesion()">Renovar</button>
+<button onclick="cerrarSesion()">Cerrar</button>
+
+<hr>
+
+<input id="campo" placeholder="Campo">
+<input id="valor" placeholder="Valor">
+
+<button onclick="actualizarSesion()">
+Actualizar Campo
+</button>
+
+</div>
+
+<!-- ===================================================== -->
+<!-- NOTIFICACIONES -->
+<!-- ===================================================== -->
+
+<div class="section">
+<h2>Notificaciones</h2>
+
+<input id="n_person_id" placeholder="Person ID">
+<input id="mensaje" placeholder="Mensaje">
+
+<button onclick="crearNotificacion()">
+Crear Notificación
+</button>
+
+<button onclick="listarNotificaciones()">
+Listar
+</button>
+
+<button onclick="contarNotificaciones()">
+Contar
+</button>
+
+<button onclick="consumirNotificacion()">
+Consumir Una
+</button>
+
+<button onclick="consumirTodas()">
+Consumir Todas
+</button>
+
+</div>
+
+<!-- ===================================================== -->
+<!-- RANKING -->
+<!-- ===================================================== -->
+
+<div class="section">
+<h2>Ranking de Animales</h2>
+
+<input id="animal_id" placeholder="Animal ID">
+<input id="animal_nombre" placeholder="Nombre">
+
+<button onclick="inicializarAnimal()">
+Inicializar Animal
+</button>
+
+<button onclick="registrarVisita()">
+Registrar Visita
+</button>
+
+<button onclick="obtenerPosicion()">
+Obtener Posición
+</button>
+
+<button onclick="obtenerVisitasHoy()">
+Visitas Hoy
+</button>
+
+<button onclick="obtenerRanking()">
+Ver Ranking
+</button>
+
+</div>
+
+<div class="section">
+<h2>Resultado</h2>
+
+<pre id="resultado"></pre>
+</div>
+
+<script>
+
+function mostrar(data){
+    document.getElementById("resultado").textContent =
+        JSON.stringify(data,null,2);
+}
+
+//
+// SESIONES
+//
+
+async function crearSesion(){
+
+    const response = await fetch("/redis/sesiones",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            person_id:document.getElementById("s_person_id").value,
+            nombre:document.getElementById("s_nombre").value,
+            apellido:document.getElementById("s_apellido").value,
+            email:document.getElementById("s_email").value,
+            rol:document.getElementById("s_rol").value || "adoptante"
+        })
+    });
+
+    mostrar(await response.json());
+}
+
+async function obtenerSesion(){
+
+    const id =
+        document.getElementById("s_person_id").value;
+
+    const response =
+        await fetch(`/redis/sesiones/${id}`);
+
+    mostrar(await response.json());
+}
+
+async function actualizarSesion(){
+
+    const id =
+        document.getElementById("s_person_id").value;
+
+    const response = await fetch(
+        `/redis/sesiones/${id}`,
+        {
+            method:"PATCH",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                campo:
+                    document.getElementById("campo").value,
+                valor:
+                    document.getElementById("valor").value
+            })
+        }
+    );
+
+    mostrar(await response.json());
+}
+
+async function renovarSesion(){
+
+    const id =
+        document.getElementById("s_person_id").value;
+
+    const response =
+        await fetch(
+            `/redis/sesiones/${id}/renovar`,
+            {
+                method:"POST"
+            }
+        );
+
+    mostrar(await response.json());
+}
+
+async function cerrarSesion(){
+
+    const id =
+        document.getElementById("s_person_id").value;
+
+    const response =
+        await fetch(
+            `/redis/sesiones/${id}`,
+            {
+                method:"DELETE"
+            }
+        );
+
+    mostrar(await response.json());
+}
+
+//
+// NOTIFICACIONES
+//
+
+async function crearNotificacion(){
+
+    const response = await fetch(
+        "/redis/notificaciones",
+        {
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                person_id:
+                    document.getElementById("n_person_id").value,
+                mensaje:
+                    document.getElementById("mensaje").value
+            })
+        }
+    );
+
+    mostrar(await response.json());
+}
+
+async function listarNotificaciones(){
+
+    const id =
+        document.getElementById("n_person_id").value;
+
+    const response =
+        await fetch(
+            `/redis/notificaciones/${id}`
+        );
+
+    mostrar(await response.json());
+}
+
+async function contarNotificaciones(){
+
+    const id =
+        document.getElementById("n_person_id").value;
+
+    const response =
+        await fetch(
+            `/redis/notificaciones/${id}/count`
+        );
+
+    mostrar(await response.json());
+}
+
+async function consumirNotificacion(){
+
+    const id =
+        document.getElementById("n_person_id").value;
+
+    const response =
+        await fetch(
+            `/redis/notificaciones/${id}/consume`,
+            {
+                method:"POST"
+            }
+        );
+
+    mostrar(await response.json());
+}
+
+async function consumirTodas(){
+
+    const id =
+        document.getElementById("n_person_id").value;
+
+    const response =
+        await fetch(
+            `/redis/notificaciones/${id}/consume-all`,
+            {
+                method:"POST"
+            }
+        );
+
+    mostrar(await response.json());
+}
+
+//
+// RANKING
+//
+
+async function inicializarAnimal(){
+
+    const response =
+        await fetch(
+            "/redis/animales",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify({
+                    animal_id:
+                        document.getElementById("animal_id").value,
+                    nombre:
+                        document.getElementById("animal_nombre").value
+                })
+            }
+        );
+
+    mostrar(await response.json());
+}
+
+async function registrarVisita(){
+
+    const response =
+        await fetch(
+            "/redis/visitas",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify({
+                    animal_id:
+                        document.getElementById("animal_id").value,
+                    nombre:
+                        document.getElementById("animal_nombre").value
+                })
+            }
+        );
+
+    mostrar(await response.json());
+}
+
+async function obtenerRanking(){
+
+    const response =
+        await fetch(
+            "/redis/ranking"
+        );
+
+    mostrar(await response.json());
+}
+
+async function obtenerPosicion(){
+
+    const nombre =
+        document.getElementById("animal_nombre").value;
+
+    const response =
+        await fetch(
+            `/redis/ranking/${nombre}`
+        );
+
+    mostrar(await response.json());
+}
+
+async function obtenerVisitasHoy(){
+
+    const animal =
+        document.getElementById("animal_id").value;
+
+    const response =
+        await fetch(
+            `/redis/visitas/${animal}`
+        );
+
+    mostrar(await response.json());
+}
+
+</script>
+
+</body>
+</html>
