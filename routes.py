@@ -12,8 +12,18 @@ try:
 except Exception as e:
     print(f"[WARN] Seeder deshabilitado: {e}")
     seeder = None
-import clients.neo4j_client as neo4j
-import clients.redis_client as redis_client
+
+try:
+    import clients.neo4j_client as neo4j
+except Exception as e:
+    print(f"[WARN] Neo4j deshabilitado: {e}")
+    neo4j = None
+
+try:
+    import clients.redis_client as redis_client
+except Exception as e:
+    print(f"[WARN] Redis deshabilitado: {e}")
+    redis_client = None
 
 
 bp = Blueprint("main", __name__)
