@@ -23,7 +23,7 @@ from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override = True)
 
 # ─── Configuración ───────────────────────────────────────────────────────────
 

@@ -23,7 +23,12 @@ from uuid import UUID, uuid4
 from cassandra.query import BatchStatement, BatchType
 from faker import Faker
 
-from clients import cassandra_client
+try:
+    from clients import cassandra_client
+except Exception as e:
+    print(f"[WARN] Cassandra no disponible en seeder: {e}")
+    cassandra_client = None
+    
 import clients.mongo_client as mongo
 
 # ─── Parámetros del dataset ─────────────────────────────────────────────────

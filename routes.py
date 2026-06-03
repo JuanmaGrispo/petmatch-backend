@@ -375,6 +375,8 @@ def mongo_seed():
     confirm = payload.get("confirm", "")
     if confirm != SEED_CONFIRM_PHRASE:
         return jsonify({"error": "confirmación inválida"}), 400
+    if seeder is None:
+        return jsonify({"error": "Seeder no disponible"}), 503
     summary = seeder.run_mongo(truncate=True)
     return jsonify({"status": "ok", "summary": summary})
 
