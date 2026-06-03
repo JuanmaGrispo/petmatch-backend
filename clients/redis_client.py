@@ -39,6 +39,9 @@ def crear_sesion(
 
     key = f"sesion:usuario:{person_id}"
 
+    if r.exists(key):
+        raise ValueError(f"Ya existe una sesión activa para el ID '{person_id}'")
+
     datos = {
         "person_id": person_id,
         "nombre": nombre,
@@ -114,42 +117,42 @@ def cerrar_sesion(person_id):
 # NOTIFICACIONES
 # ============================================================
 
-def encolar_notificacion(person_id, mensaje):
+def agregar_recordatorio(person_id, mensaje):
     r = get_redis()
 
-    key = f"notificaciones:usuario:{person_id}"
+    key = f"recordatorios:usuario:{person_id}"
 
     return r.rpush(key, mensaje)
 
 
-def listar_notificaciones(person_id):
+def listar_recordatorios(person_id):
     r = get_redis()
 
-    key = f"notificaciones:usuario:{person_id}"
+    key = f"recordatorios:usuario:{person_id}"
 
     return r.lrange(key, 0, -1)
 
 
-def contar_notificaciones(person_id):
+def contar_recordatorios(person_id):
     r = get_redis()
 
-    key = f"notificaciones:usuario:{person_id}"
+    key = f"recordatorios:usuario:{person_id}"
 
     return r.llen(key)
 
 
-def consumir_notificacion(person_id):
+def marcar_hecho(person_id):
     r = get_redis()
 
-    key = f"notificaciones:usuario:{person_id}"
+    key = f"recordatorios:usuario:{person_id}"
 
     return r.lpop(key)
 
 
-def consumir_todas(person_id):
+def borrar_todos(person_id):
     r = get_redis()
 
-    key = f"notificaciones:usuario:{person_id}"
+    key = f"recordatorios:usuario:{person_id}"
 
     mensajes = []
 
@@ -168,6 +171,14 @@ def consumir_todas(person_id):
 # RANKING Y VISITAS
 # ============================================================
 
+def _get_nombre(r, animal_id):
+    """Resuelve el nombre de un animal a partir de su ID usando el Hash de mapeo."""
+    nombre = r.hget("animales:mapa", animal_id)
+    if not nombre:
+        raise ValueError(f"Animal ID '{animal_id}' no encontrado en el sistema")
+    return nombre
+
+
 def inicializar_animal(
     animal_id,
     nombre,
@@ -176,9 +187,15 @@ def inicializar_animal(
 ):
     r = get_redis()
 
+    if r.hexists("animales:mapa", animal_id):
+        raise ValueError(f"Ya existe un animal registrado con el ID '{animal_id}'")
+
     contador_key = f"visitas:animal:{animal_id}"
 
     pipe = r.pipeline()
+
+    # Guardar mapeo id → nombre
+    pipe.hset("animales:mapa", animal_id, nombre)
 
     pipe.zadd(
         "ranking:animales",
@@ -196,12 +213,10 @@ def inicializar_animal(
     return True
 
 
-def registrar_visita(
-    animal_id,
-    nombre
-):
+def registrar_visita(animal_id):
     r = get_redis()
 
+    nombre = _get_nombre(r, animal_id)
     contador_key = f"visitas:animal:{animal_id}"
 
     pipe = r.pipeline()
@@ -222,6 +237,8 @@ def registrar_visita(
     resultados = pipe.execute()
 
     return {
+        "animal_id": animal_id,
+        "nombre": nombre,
         "historico": int(resultados[0]),
         "hoy": int(resultados[1])
     }
@@ -246,8 +263,10 @@ def obtener_ranking(top=10):
     ]
 
 
-def obtener_posicion(nombre):
+def obtener_posicion(animal_id):
     r = get_redis()
+
+    nombre = _get_nombre(r, animal_id)
 
     posicion = r.zrevrank(
         "ranking:animales",
@@ -263,6 +282,8 @@ def obtener_posicion(nombre):
         return None
 
     return {
+        "animal_id": animal_id,
+        "nombre": nombre,
         "posicion": posicion + 1,
         "visitas_historicas": int(score)
     }
