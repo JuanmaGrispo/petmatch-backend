@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 from datetime import datetime
 import clients.cassandra_client as cassandra
 import clients.neo4j_client as neo4j
+import clients.mongo_client as mongo
 import seeder
 
 
@@ -207,3 +208,154 @@ def post_solicitud():
         details    = d.get("details", ""),
     )
     return jsonify({"status": "ok"}), 201
+
+# ════════════════════════════════════════════════════════════════════════════
+# MONGODB
+# ════════════════════════════════════════════════════════════════════════════
+
+@bp.route("/mongo")
+def mongo_home():
+    return render_template("mongo.html")
+
+# ─── Samples (poblar dropdowns de la UI) ────────────────────────────────────
+
+@bp.route("/mongo/samples", methods=["GET"])
+def mongo_samples():
+    return jsonify(mongo.get_sample_data())
+
+# ─── Seed ───────────────────────────────────────────────────────────────────
+
+@bp.route("/mongo/seed", methods=["POST"])
+def mongo_seed():
+    payload = request.get_json(silent=True) or {}
+    confirm = payload.get("confirm", "")
+    if confirm != SEED_CONFIRM_PHRASE:
+        return jsonify({"error": "confirmación inválida"}), 400
+    summary = seeder.run_mongo(truncate=True)
+    return jsonify({"status": "ok", "summary": summary})
+
+# ─── C1 — animales disponibles por tipo y refugio ───────────────────────────
+
+@bp.route("/mongo/c1/animales", methods=["GET"])
+def mongo_c1():
+    tipo    = request.args.get("tipo", "Perro")
+    refugio = request.args.get("refugio", "Huellitas")
+    return jsonify(mongo.consulta_1_animales_disponibles(tipo, refugio))
+
+# ─── C2 — adoptantes por perfil completo ────────────────────────────────────
+
+@bp.route("/mongo/c2/adoptantes", methods=["GET"])
+def mongo_c2():
+    ciudad       = request.args.get("ciudad", "Buenos Aires")
+    tipo_vivienda = request.args.get("tipo_vivienda", "Casa")
+    experiencia  = request.args.get("experiencia", "Alta")
+    return jsonify(mongo.consulta_2_adoptantes_por_perfil(ciudad, tipo_vivienda, experiencia))
+
+# ─── C3 — reporte agregado por estado y tipo ────────────────────────────────
+
+@bp.route("/mongo/c3/reporte", methods=["GET"])
+def mongo_c3():
+    return jsonify(mongo.consulta_3_reporte_por_estado_y_tipo())
+
+# ─── C4 — animales por inicial de nombre ────────────────────────────────────
+
+@bp.route("/mongo/c4/animales", methods=["GET"])
+def mongo_c4():
+    letra = request.args.get("letra", "A")
+    return jsonify(mongo.consulta_4_animales_por_inicial(letra))
+
+# ─── C5 — adoptantes con animal asignado ────────────────────────────────────
+
+@bp.route("/mongo/c5/adoptantes", methods=["GET"])
+def mongo_c5():
+    return jsonify(mongo.consulta_5_adoptantes_con_animal())
+
+# ─── CRUD animales ───────────────────────────────────────────────────────────
+
+@bp.route("/mongo/animales", methods=["POST"])
+def mongo_crear_animal():
+    return jsonify(mongo.insertar_animal(request.json))
+
+@bp.route("/mongo/animales/<animal_id>", methods=["GET"])
+def mongo_buscar_animal(animal_id):
+    return jsonify(mongo.buscar_animal_por_id(animal_id))
+
+@bp.route("/mongo/animales/<animal_id>", methods=["PUT"])
+def mongo_actualizar_animal(animal_id):
+    return jsonify(mongo.actualizar_animal(animal_id, request.json))
+
+@bp.route("/mongo/animales/<animal_id>", methods=["DELETE"])
+def mongo_eliminar_animal(animal_id):
+    return jsonify(mongo.eliminar_animal(animal_id))
+
+# ─── CRUD adoptantes ─────────────────────────────────────────────────────────
+
+@bp.route("/mongo/adoptantes", methods=["POST"])
+def mongo_crear_adoptante():
+    return jsonify(mongo.insertar_adoptante(request.json))
+
+@bp.route("/mongo/adoptantes/<person_id>", methods=["GET"])
+def mongo_buscar_adoptante(person_id):
+    return jsonify(mongo.buscar_adoptante_por_id(person_id))
+
+@bp.route("/mongo/adoptantes/<person_id>", methods=["PUT"])
+def mongo_actualizar_adoptante(person_id):
+    return jsonify(mongo.actualizar_adoptante(person_id, request.json))
+
+@bp.route("/mongo/adoptantes/<person_id>", methods=["DELETE"])
+def mongo_eliminar_adoptante(person_id):
+    return jsonify(mongo.eliminar_adoptante(person_id))
+
+# ─── Operaciones de actualización ────────────────────────────────────────────
+
+@bp.route("/mongo/ops/update", methods=["POST"])
+def mongo_update():
+    d  = request.get_json(silent=True) or {}
+    op = d.get("op")
+    if op == "u1":
+        return jsonify(mongo.update_1_cambiar_estado(d["animal_id"], d["estado"]))
+    elif op == "u2":
+        return jsonify(mongo.update_2_perfil_adoptante(d["person_id"], d["ciudad"], d["tipo_vivienda"], d["experiencia"]))
+    elif op == "u3":
+        return jsonify(mongo.update_3_incrementar_visitas(d["animal_id"]))
+    elif op == "u4":
+        return jsonify(mongo.update_4_agregar_vacuna(d["animal_id"], d["vacuna"]))
+    elif op == "u5":
+        return jsonify(mongo.update_5_quitar_campo(d["person_id"], d["campo"]))
+    elif op == "u6":
+        return jsonify(mongo.update_6_agregar_tag(d["animal_id"], d["tag"]))
+    elif op == "u7":
+        return jsonify(mongo.update_7_masivos_por_refugio(d["refugio"], d["estado"]))
+    return jsonify({"error": "operación no reconocida"}), 400
+
+# ─── Operaciones de eliminación ──────────────────────────────────────────────
+
+@bp.route("/mongo/ops/delete", methods=["POST"])
+def mongo_delete():
+    d  = request.get_json(silent=True) or {}
+    op = d.get("op")
+    if op == "d1":
+        return jsonify(mongo.delete_1_animal(d["animal_id"]))
+    elif op == "d2":
+        return jsonify(mongo.delete_2_adoptante(d["person_id"]))
+    elif op == "d3":
+        return jsonify(mongo.delete_3_animales_por_estado(d["estado"]))
+    elif op == "d4":
+        return jsonify(mongo.delete_4_adoptantes_sin_email())
+    elif op == "d5":
+        return jsonify(mongo.delete_5_animales_anteriores_a(d["fecha"]))
+    elif op == "d6":
+        return jsonify(mongo.delete_6_por_refugio_y_estado(d["refugio"], d["estado"]))
+    elif op == "d7":
+        return jsonify(mongo.delete_7_por_lista_ids(d["ids"]))
+    return jsonify({"error": "operación no reconocida"}), 400
+
+# ─── Exportar CSV ────────────────────────────────────────────────────────────
+
+@bp.route("/mongo/exportar", methods=["GET"])
+def mongo_exportar():
+    from flask import send_file
+    ruta = mongo.exportar_animales_csv()
+    if not ruta:
+        return jsonify({"error": "No hay datos para exportar"}), 404
+    return send_file(ruta, as_attachment=True)
