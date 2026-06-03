@@ -2,3 +2,5 @@ flask
 cassandra-driver
 python-dotenv
 Faker
+pymongo
+pandas
