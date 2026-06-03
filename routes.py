@@ -14,6 +14,14 @@ except Exception as e:
     seeder = None
 import clients.redis_client as redis_client
 
+try:
+    import clients.mongo_client as mongo
+    mongo.ensure_indexes()
+except Exception as e:
+    print(f"[WARN] MongoDB deshabilitado: {e}")
+    mongo = None
+
+
 bp = Blueprint("main", __name__)
 
 SEED_CONFIRM_PHRASE = "BORRAR Y SEMBRAR"
