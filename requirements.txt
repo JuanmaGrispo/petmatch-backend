@@ -3,3 +3,5 @@ cassandra-driver
 python-dotenv
 Faker
 redis>=5.0.0
+pymongo
+pandas
