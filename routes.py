@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request
 from uuid import UUID, uuid4
 from datetime import datetime
-
 try:
     import clients.cassandra_client as cassandra
 except Exception as e:
@@ -13,29 +12,11 @@ try:
 except Exception as e:
     print(f"[WARN] Seeder deshabilitado: {e}")
     seeder = None
-
-try:
-    import clients.neo4j_client as neo4j
-except Exception as e:
-    print(f"[WARN] Neo4j deshabilitado: {e}")
-    neo4j = None
-
-try:
-    import clients.redis_client as redis_client
-except Exception as e:
-    print(f"[WARN] Redis deshabilitado: {e}")
-    redis_client = None
-try:
-    import clients.mongo_client as mongo
-except Exception as e:
-    print(f"[WARN] Mongo deshabilitado: {e}")
-    mongo = None
-
+import clients.redis_client as redis_client
 
 bp = Blueprint("main", __name__)
 
 SEED_CONFIRM_PHRASE = "BORRAR Y SEMBRAR"
-
 
 
 @bp.route("/")
@@ -51,9 +32,6 @@ def cassandra_home():
 def redis_home():
     return render_template("redis.html")
 
-@bp.route("/neo4j")
-def neo4j_home():
-    return render_template("neo4j.html")
 
 # ─── Samples (poblar dropdowns de la UI) ────────────────────────────────────
 
@@ -145,51 +123,6 @@ def q8(shelter_id):
     rows = cassandra.q8_eventos_por_refugio_y_fecha(UUID(shelter_id), date_from, date_to)
     return jsonify(rows)
 
-# ════════════════════════════════════════════════════════════════════════════
-# NEO4J
-# ════════════════════════════════════════════════════════════════════════════
- 
-@bp.route("/api/personas/<person_id>/recomendaciones", methods=["GET"])
-def get_recomendaciones(person_id):
-    data = neo4j.recomendar_animales(person_id)
-    return jsonify({"person_id": person_id, "recomendaciones": data})
- 
- 
-@bp.route("/api/refugios/<nombre>/animales", methods=["GET"])
-def get_animales_refugio(nombre):
-    data = neo4j.animales_por_refugio(nombre)
-    return jsonify({"refugio": nombre, "animales": data})
- 
- 
-@bp.route("/api/personas/<person_id>/adopciones", methods=["GET"])
-def get_historial(person_id):
-    data = neo4j.historial_adopciones(person_id)
-    return jsonify({"person_id": person_id, "adopciones": data})
- 
- 
-@bp.route("/api/animales/disponibles", methods=["GET"])
-def get_disponibles():
-    data = neo4j.animales_disponibles_por_tipo()
-    return jsonify({"disponibles": data})
- 
- 
-@bp.route("/api/animales/<animal_id>/compatibles", methods=["GET"])
-def get_personas_compatibles(animal_id):
-    data = neo4j.personas_compatibles(animal_id)
-    return jsonify({"animal_id": animal_id, "personas": data})
-
-@bp.route("/api/personas", methods=["GET"])
-def get_personas():
-    return jsonify(neo4j.todas_las_personas())
-
-@bp.route("/api/refugios", methods=["GET"])
-def get_refugios():
-    return jsonify(neo4j.todos_los_refugios())
-
-@bp.route("/api/animales", methods=["GET"])
-def get_animales():
-    return jsonify(neo4j.todos_los_animales())
-
 
 # ─── INSERT — evento (escribe en las 6 tablas de evento) ────────────────────
 
@@ -222,6 +155,7 @@ def post_favorito():
     )
     return jsonify({"status": "ok"}), 201
 
+
 # ─── INSERT — solicitud ──────────────────────────────────────────────────────
 
 @bp.route("/cassandra/solicitudes", methods=["POST"])
@@ -246,13 +180,16 @@ def post_solicitud():
 def crear_sesion():
     d = request.json
 
-    resultado = redis_client.crear_sesion(
-        person_id=d["person_id"],
-        nombre=d["nombre"],
-        apellido=d["apellido"],
-        email=d["email"],
-        rol=d.get("rol", "adoptante")
-    )
+    try:
+        resultado = redis_client.crear_sesion(
+            person_id=d["person_id"],
+            nombre=d["nombre"],
+            apellido=d["apellido"],
+            email=d["email"],
+            rol=d.get("rol", "adoptante")
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
 
     return jsonify(resultado), 201
 
@@ -310,7 +247,7 @@ def cerrar_sesion(person_id):
 def crear_notificacion():
     d = request.json
 
-    redis_client.encolar_notificacion(
+    redis_client.agregar_recordatorio(
         d["person_id"],
         d["mensaje"]
     )
@@ -321,20 +258,20 @@ def crear_notificacion():
 @bp.route("/redis/notificaciones/<person_id>", methods=["GET"])
 def listar_notificaciones(person_id):
     return jsonify(
-        redis_client.listar_notificaciones(person_id)
+        redis_client.listar_recordatorios(person_id)
     )
 
 
 @bp.route("/redis/notificaciones/<person_id>/count", methods=["GET"])
 def contar_notificaciones(person_id):
     return jsonify({
-        "cantidad": redis_client.contar_notificaciones(person_id)
+        "cantidad": redis_client.contar_recordatorios(person_id)
     })
 
 
 @bp.route("/redis/notificaciones/<person_id>/consume", methods=["POST"])
 def consumir_notificacion(person_id):
-    msg = redis_client.consumir_notificacion(person_id)
+    msg = redis_client.marcar_hecho(person_id)
 
     return jsonify({
         "mensaje": msg
@@ -344,7 +281,7 @@ def consumir_notificacion(person_id):
 @bp.route("/redis/notificaciones/<person_id>/consume-all", methods=["POST"])
 def consumir_todas(person_id):
     return jsonify(
-        redis_client.consumir_todas(person_id)
+        redis_client.borrar_todos(person_id)
     )
 
 # ============================================================
@@ -355,12 +292,15 @@ def consumir_todas(person_id):
 def inicializar_animal():
     d = request.json
 
-    redis_client.inicializar_animal(
-        animal_id=d["animal_id"],
-        nombre=d["nombre"],
-        visitas_historicas=d.get("visitas_historicas", 0),
-        visitas_hoy=d.get("visitas_hoy", 0)
-    )
+    try:
+        redis_client.inicializar_animal(
+            animal_id=d["animal_id"],
+            nombre=d["nombre"],
+            visitas_historicas=d.get("visitas_historicas", 0),
+            visitas_hoy=d.get("visitas_hoy", 0)
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
 
     return jsonify({"status": "ok"}), 201
 
@@ -370,8 +310,7 @@ def registrar_visita():
     d = request.json
 
     resultado = redis_client.registrar_visita(
-        animal_id=d["animal_id"],
-        nombre=d["nombre"]
+        animal_id=d["animal_id"]
     )
 
     return jsonify(resultado)
@@ -386,12 +325,15 @@ def ranking():
     )
 
 
-@bp.route("/redis/ranking/<nombre>", methods=["GET"])
-def posicion(nombre):
-    resultado = redis_client.obtener_posicion(nombre)
+@bp.route("/redis/ranking/<animal_id>", methods=["GET"])
+def posicion(animal_id):
+    try:
+        resultado = redis_client.obtener_posicion(animal_id)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
 
     if resultado is None:
-        return jsonify({"error": "animal no encontrado"}), 404
+        return jsonify({"error": "animal no encontrado en el ranking"}), 404
 
     return jsonify(resultado)
 

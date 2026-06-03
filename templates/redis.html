@@ -466,8 +466,8 @@
   <button class="tab active" onclick="switchTab('sesiones')" id="tab-sesiones">
     <i class="tab-icon">👤</i>Sesiones
   </button>
-  <button class="tab" onclick="switchTab('notificaciones')" id="tab-notificaciones">
-    <i class="tab-icon">🔔</i>Notificaciones
+  <button class="tab" onclick="switchTab('recordatorios')" id="tab-recordatorios">
+    <i class="tab-icon">📝</i>Recordatorios
   </button>
   <button class="tab" onclick="switchTab('ranking')" id="tab-ranking">
     <i class="tab-icon">🏆</i>Ranking
@@ -569,15 +569,15 @@
     </div>
 
     <!-- ══════════════════════════════════════════════ NOTIFICACIONES -->
-    <div class="panel" id="panel-notificaciones">
+    <div class="panel" id="panel-recordatorios">
       <div class="work-area">
 
-        <p class="panel-title">Cola de notificaciones · List · FIFO</p>
+        <p class="panel-title">Recordatorios personales · List · FIFO</p>
 
         <!-- ENCOLAR -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">Encolar notificación <span class="badge">RPUSH</span></span>
+            <span class="card-title">Agregar recordatorio <span class="badge">RPUSH</span></span>
           </div>
           <div class="field-row two">
             <div class="field">
@@ -587,29 +587,29 @@
             <div class="field">
               <label>Plantilla rápida</label>
               <select id="n_template" onchange="applyTemplate()">
-                <option value="">— escribir mensaje —</option>
-                <option value="Tu solicitud para adoptar fue aprobada ✅">Adopción aprobada</option>
-                <option value="Nuevo animal compatible con tu perfil 🐾">Animal compatible</option>
-                <option value="Tu sesión está por expirar ⏳">Sesión por expirar</option>
-                <option value="Recordatorio: completá tu perfil de adoptante">Completar perfil</option>
+                <option value="">— plantilla rápida —</option>
+                <option value="Llamar al veterinario para turno">Llamar al veterinario</option>
+                <option value="Comprar alimento para esta semana">Comprar alimento</option>
+                <option value="Renovar vacunas del mes que viene">Renovar vacunas</option>
+                <option value="Revisar solicitud de adopción pendiente">Revisar solicitud</option>
               </select>
             </div>
           </div>
           <div class="field-row single">
             <div class="field">
-              <label>Mensaje</label>
-              <textarea id="mensaje" placeholder="Escribí el mensaje de la notificación..."></textarea>
+              <label>Recordatorio</label>
+              <textarea id="mensaje" placeholder="Escribí tu recordatorio..."></textarea>
             </div>
           </div>
           <div class="btn-row">
-            <button class="btn btn-primary" onclick="crearNotificacion()">📤 Encolar</button>
+            <button class="btn btn-primary" onclick="crearNotificacion()">📝 Guardar</button>
           </div>
         </div>
 
         <!-- CONSULTAR COLA -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">Consultar cola</span>
+            <span class="card-title">Ver recordatorios</span>
           </div>
           <div class="field-row single">
             <div class="field">
@@ -618,10 +618,10 @@
             </div>
           </div>
           <div class="btn-row">
-            <button class="btn btn-ghost" onclick="listarNotificaciones()">📋 Ver todas</button>
+            <button class="btn btn-ghost" onclick="listarNotificaciones()">📋 Ver todos</button>
             <button class="btn btn-ghost" onclick="contarNotificaciones()">🔢 Contar</button>
-            <button class="btn btn-ghost" onclick="consumirNotificacion()">📥 Consumir una</button>
-            <button class="btn btn-danger" onclick="consumirTodas()">🗑 Vaciar cola</button>
+            <button class="btn btn-ghost" onclick="consumirNotificacion()">✅ Marcar como hecho</button>
+            <button class="btn btn-danger" onclick="consumirTodas()">🗑 Borrar todos</button>
           </div>
         </div>
 
@@ -660,14 +660,10 @@
           <div class="card-header">
             <span class="card-title">Registrar visita <span class="badge">ZINCRBY + INCR</span></span>
           </div>
-          <div class="field-row two">
+          <div class="field-row single">
             <div class="field">
               <label>Animal ID</label>
               <input id="animal_id" placeholder="A684346">
-            </div>
-            <div class="field">
-              <label>Nombre</label>
-              <input id="animal_nombre" placeholder="Max">
             </div>
           </div>
           <div class="btn-row">
@@ -986,16 +982,15 @@ function obtenerRanking() {
 }
 
 function registrarVisita() {
-  api('POST', '/redis/visitas', {
-    animal_id: v('animal_id'),
-    nombre:    v('animal_nombre')
-  }, null);
+  const id = v('animal_id');
+  if (!id) return toast('Ingresá un Animal ID', false);
+  api('POST', '/redis/visitas', { animal_id: id }, null);
 }
 
 function obtenerPosicion() {
-  const nombre = v('animal_nombre');
-  if (!nombre) return toast('Ingresá el nombre del animal', false);
-  api('GET', `/redis/ranking/${encodeURIComponent(nombre)}`, null, null);
+  const id = v('animal_id');
+  if (!id) return toast('Ingresá un Animal ID', false);
+  api('GET', `/redis/ranking/${encodeURIComponent(id)}`, null, null);
 }
 
 function obtenerVisitasHoy() {
