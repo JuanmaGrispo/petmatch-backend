@@ -21,6 +21,12 @@ except Exception as e:
     print(f"[WARN] MongoDB deshabilitado: {e}")
     mongo = None
 
+try:
+    import clients.neo4j_client as neo4j_client
+except Exception as e:
+    print(f"[WARN] Neo4j deshabilitado: {e}")
+    neo4j_client = None
+
 
 bp = Blueprint("main", __name__)
 
@@ -505,3 +511,55 @@ def mongo_exportar():
     if not ruta:
         return jsonify({"error": "No hay datos para exportar"}), 404
     return send_file(ruta, as_attachment=True)
+
+# ════════════════════════════════════════════════════════════════════════════
+# NEO4J
+# ════════════════════════════════════════════════════════════════════════════
+
+@bp.route('/neo4j')
+def neo4j():
+    return render_template('neo4j.html')
+
+
+@bp.route("/api/personas")
+def api_personas():
+    return jsonify(neo4j_client.todas_las_personas())
+
+
+@bp.route("/api/refugios")
+def api_refugios():
+    return jsonify(neo4j_client.todos_los_refugios())
+
+
+@bp.route("/api/animales")
+def api_animales():
+    return jsonify(neo4j_client.todos_los_animales())
+
+
+@bp.route("/api/animales/disponibles")
+def api_animales_disponibles():
+    return jsonify({"disponibles": neo4j_client.animales_disponibles_por_tipo()})
+
+
+@bp.route("/api/personas/<person_id>/recomendaciones")
+def api_recomendaciones(person_id):
+    return jsonify({"recomendaciones": neo4j_client.recomendar_animales(person_id)})
+
+
+@bp.route("/api/refugios/<nombre>/animales")
+def api_animales_por_refugio(nombre):
+    return jsonify({"animales": neo4j_client.animales_por_refugio(nombre)})
+
+
+@bp.route("/api/personas/<person_id>/adopciones")
+def api_adopciones(person_id):
+    return jsonify({"adopciones": neo4j_client.historial_adopciones(person_id)})
+
+
+@bp.route("/api/animales/<animal_id>/compatibles")
+def api_compatibles(animal_id):
+    return jsonify({"personas": neo4j_client.personas_compatibles(animal_id)})
+
+@bp.route("/api/personas/adoptantes")
+def api_adoptantes():
+    return jsonify(neo4j_client.personas_que_adoptaron())
