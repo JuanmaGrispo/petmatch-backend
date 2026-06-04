@@ -8,15 +8,6 @@ SESSION_TTL = 1800
 TTL_CONTADOR_DIARIO = 86400
 
 
-def _segundos_hasta_medianoche():
-    """Devuelve los segundos que faltan hasta las 00:00 del día siguiente."""
-    ahora = datetime.now()
-    medianoche = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
-    from datetime import timedelta
-    medianoche_siguiente = medianoche + timedelta(days=1)
-    return int((medianoche_siguiente - ahora).total_seconds())
-
-
 def get_redis():
     global _redis_client
 
@@ -129,6 +120,9 @@ def cerrar_sesion(person_id):
 def agregar_recordatorio(person_id, mensaje):
     r = get_redis()
 
+    if not r.exists(f"sesion:usuario:{person_id}"):
+        raise ValueError(f"No existe una sesión activa para el ID '{person_id}'")
+
     key = f"recordatorios:usuario:{person_id}"
 
     return r.rpush(key, mensaje)
@@ -214,7 +208,7 @@ def inicializar_animal(
     pipe.set(
         contador_key,
         visitas_hoy,
-        ex=_segundos_hasta_medianoche()
+        ex=TTL_CONTADOR_DIARIO
     )
 
     pipe.execute()
@@ -240,7 +234,7 @@ def registrar_visita(animal_id):
 
     pipe.expire(
         contador_key,
-        _segundos_hasta_medianoche()
+        TTL_CONTADOR_DIARIO
     )
 
     resultados = pipe.execute()
