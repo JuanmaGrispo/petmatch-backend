@@ -8,6 +8,15 @@ SESSION_TTL = 1800
 TTL_CONTADOR_DIARIO = 86400
 
 
+def _segundos_hasta_medianoche():
+    """Devuelve los segundos que faltan hasta las 00:00 del día siguiente."""
+    ahora = datetime.now()
+    medianoche = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
+    from datetime import timedelta
+    medianoche_siguiente = medianoche + timedelta(days=1)
+    return int((medianoche_siguiente - ahora).total_seconds())
+
+
 def get_redis():
     global _redis_client
 
@@ -205,7 +214,7 @@ def inicializar_animal(
     pipe.set(
         contador_key,
         visitas_hoy,
-        ex=TTL_CONTADOR_DIARIO
+        ex=_segundos_hasta_medianoche()
     )
 
     pipe.execute()
@@ -231,7 +240,7 @@ def registrar_visita(animal_id):
 
     pipe.expire(
         contador_key,
-        TTL_CONTADOR_DIARIO
+        _segundos_hasta_medianoche()
     )
 
     resultados = pipe.execute()
