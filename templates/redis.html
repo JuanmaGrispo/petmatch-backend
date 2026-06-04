@@ -11,12 +11,12 @@
     --red:       #E63B2E;
     --red-dim:   #8B1C14;
     --red-glow:  rgba(230,59,46,0.25);
-    --bg:        #0A0A0A;
-    --surface:   #111111;
-    --surface2:  #1A1A1A;
-    --border:    #2A2A2A;
-    --text:      #F0EDE8;
-    --muted:     #666;
+    --bg:        #F2F4F7;
+    --surface:   #FFFFFF;
+    --surface2:  #F8FAFC;
+    --border:    #D6DEE6;
+    --text:      #4A2C2A;
+    --muted:     #8A6A67;
     --green:     #2ECC71;
     --amber:     #F39C12;
     --mono:      'Space Mono', monospace;
@@ -45,7 +45,7 @@
   /* ── HEADER ── */
   header {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(10,10,10,0.92);
+    background: #C0392B;;
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 16px;
@@ -55,7 +55,7 @@
   .logo-dot {
     width: 10px; height: 10px;
     border-radius: 50%;
-    background: var(--red);
+    background: white;
     box-shadow: 0 0 12px var(--red);
     animation: pulse 2s ease-in-out infinite;
   }
@@ -66,15 +66,15 @@
     font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: var(--text);
+    color: white;;
   }
-  header h1 span { color: var(--red); }
+  header h1 span { color: white; }
 
   .header-badge {
     margin-left: auto;
     font-family: var(--mono);
     font-size: 11px;
-    color: var(--muted);
+    color: white;;
     letter-spacing: 1px;
   }
   .status-dot {
