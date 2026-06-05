@@ -5,9 +5,9 @@ Limpia y recarga el módulo de ranking: inicializa animales con IDs y nombres
 ficticios, reconstruyendo animales:mapa y ranking:animales desde cero.
 
 Uso:
-    python redis_seeder.py              # carga 57 animales por defecto
-    python redis_seeder.py --n 30       # carga 30 animales
-    python redis_seeder.py --limpiar    # solo limpia sin cargar
+    python redis_seeder.py               # carga 1000 animales por defecto
+    python redis_seeder.py --n 30        # carga 30 animales
+    python redis_seeder.py --limpiar     # solo limpia sin cargar
 """
 
 import argparse
@@ -30,6 +30,13 @@ NOMBRES = [
     "Atlas", "Cleo", "Rex", "Zara", "Loki", "Scout"
 ]
 
+APELLIDOS = [
+    "Rodriguez", "Gomez", "Lopez", "Martinez", "Fernandez", "Garcia", "Perez",
+    "Sanchez", "Romero", "Sosa", "Torres", "Diaz", "Reyes", "Flores", "Molina",
+    "Medina", "Herrera", "Vargas", "Castro", "Suarez", "Morales", "Ortiz",
+    "Rios", "Guerrero", "Mendoza", "Vega", "Ruiz", "Blanco", "Acosta", "Rojas"
+]
+
 
 def limpiar(r):
     """Borra todas las claves del módulo de ranking."""
@@ -48,13 +55,16 @@ def limpiar(r):
 
 def cargar(r, n):
     """Inicializa n animales con datos ficticios."""
-    nombres_disponibles = NOMBRES.copy()
-    random.shuffle(nombres_disponibles)
+    # Generar nombres únicos combinando nombre + apellido
+    # Con 62 nombres x 30 apellidos = 1860 combinaciones únicas posibles
+    combinaciones = [f"{nom}_{ape}" for nom in NOMBRES for ape in APELLIDOS]
+    random.shuffle(combinaciones)
 
-    # Si pedimos más animales que nombres disponibles, agregamos sufijos
-    if n > len(nombres_disponibles):
-        extras = [f"{nom}{i}" for i, nom in enumerate(NOMBRES * (n // len(NOMBRES) + 1))]
-        nombres_disponibles = (nombres_disponibles + extras)[:n]
+    if n > len(combinaciones):
+        print(f"[WARN] Se pidieron {n} animales pero solo hay {len(combinaciones)} combinaciones únicas. Se cargarán {len(combinaciones)}.")
+        n = len(combinaciones)
+
+    nombres_disponibles = combinaciones[:n]
 
     pipe = r.pipeline()
     ttl = _segundos_hasta_medianoche()
@@ -71,12 +81,12 @@ def cargar(r, n):
         pipe.set(contador_key, visitas_hoy, ex=ttl)
 
     pipe.execute()
-    print(f"  {n} animales cargados correctamente.")
+    print(f"  {n} animales cargados. Nombres con formato Nombre_Apellido.")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Redis Seeder — PetMatch ranking")
-    parser.add_argument("--n",       type=int, default=57, help="Cantidad de animales a cargar (default: 57)")
+    parser.add_argument("--n",       type=int, default=1000, help="Cantidad de animales a cargar (default: 1000)")
     parser.add_argument("--limpiar", action="store_true",  help="Solo limpia sin cargar nuevos datos")
     args = parser.parse_args()
 
