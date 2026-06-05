@@ -1,6 +1,6 @@
 import os
 import redis
-from datetime import datetime
+from datetime import datetime, timedelta
 
 _redis_client = None
 
@@ -22,6 +22,13 @@ def get_redis():
         _redis_client.ping()
 
     return _redis_client
+
+
+def _segundos_hasta_medianoche():
+    ahora = datetime.now()
+    medianoche = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
+    medianoche_siguiente = medianoche + timedelta(days=1)
+    return int((medianoche_siguiente - ahora).total_seconds())
 
 
 # ============================================================
@@ -58,6 +65,12 @@ def crear_sesion(
     return datos
 
 
+def _limpiar_si_expiro(r, person_id):
+    sesion_key = f"sesion:usuario:{person_id}"
+    if not r.exists(sesion_key):
+        r.delete(f"recordatorios:usuario:{person_id}")
+
+
 def obtener_sesion(person_id):
     r = get_redis()
 
@@ -66,7 +79,10 @@ def obtener_sesion(person_id):
     datos = r.hgetall(key)
 
     if not datos:
+        _limpiar_si_expiro(r, person_id)
         return None
+
+    datos["ttl"] = str(r.ttl(key))
 
     return datos
 
@@ -110,11 +126,16 @@ def cerrar_sesion(person_id):
 
     key = f"sesion:usuario:{person_id}"
 
-    return r.delete(key) > 0
+    eliminada = r.delete(key) > 0
+
+    if eliminada:
+        r.delete(f"recordatorios:usuario:{person_id}")
+
+    return eliminada
 
 
 # ============================================================
-# NOTIFICACIONES
+# RECORDATORIOS
 # ============================================================
 
 def agregar_recordatorio(person_id, mensaje):
@@ -175,7 +196,6 @@ def borrar_todos(person_id):
 # ============================================================
 
 def _get_nombre(r, animal_id):
-    """Resuelve el nombre de un animal a partir de su ID usando el Hash de mapeo."""
     nombre = r.hget("animales:mapa", animal_id)
     if not nombre:
         raise ValueError(f"Animal ID '{animal_id}' no encontrado en el sistema")
@@ -193,22 +213,26 @@ def inicializar_animal(
     if r.hexists("animales:mapa", animal_id):
         raise ValueError(f"Ya existe un animal registrado con el ID '{animal_id}'")
 
+    nombre = nombre.strip().title()
+
+    if nombre in [n.title() for n in r.hvals("animales:mapa")]:
+        raise ValueError(f"Ya existe un animal registrado con el nombre '{nombre}'")
+
     contador_key = f"visitas:animal:{animal_id}"
 
     pipe = r.pipeline()
 
-    # Guardar mapeo id → nombre
     pipe.hset("animales:mapa", animal_id, nombre)
 
     pipe.zadd(
         "ranking:animales",
-        {nombre: visitas_historicas}
+        {animal_id: visitas_historicas}
     )
 
     pipe.set(
         contador_key,
         visitas_hoy,
-        ex=TTL_CONTADOR_DIARIO
+        ex=_segundos_hasta_medianoche()
     )
 
     pipe.execute()
@@ -227,14 +251,14 @@ def registrar_visita(animal_id):
     pipe.zincrby(
         "ranking:animales",
         1,
-        nombre
+        animal_id
     )
 
     pipe.incr(contador_key)
 
     pipe.expire(
         contador_key,
-        TTL_CONTADOR_DIARIO
+        _segundos_hasta_medianoche()
     )
 
     resultados = pipe.execute()
@@ -259,10 +283,11 @@ def obtener_ranking(top=10):
 
     return [
         {
-            "nombre": nombre,
+            "animal_id": animal_id,
+            "nombre": r.hget("animales:mapa", animal_id) or animal_id,
             "visitas_historicas": int(score)
         }
-        for nombre, score in ranking
+        for animal_id, score in ranking
     ]
 
 
@@ -273,12 +298,12 @@ def obtener_posicion(animal_id):
 
     posicion = r.zrevrank(
         "ranking:animales",
-        nombre
+        animal_id
     )
 
     score = r.zscore(
         "ranking:animales",
-        nombre
+        animal_id
     )
 
     if posicion is None:
