@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>PetMatch — Neo4j</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f0f4f8; color: #222; }
+        body {font-family: 'Syne', sans-serif; background: #f0f4f8; color: #222; }
 
         header {
             background: #018BFF;
@@ -17,7 +19,11 @@
         }
         header a { color: rgba(255,255,255,.75); text-decoration: none; font-size: .9rem; }
         header a:hover { color: white; }
-        header h1 { font-size: 1.3rem; flex: 1; }
+        header h1 { 
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;}
 
         .panel { padding: 1.5rem 2rem 3rem; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem; }
@@ -36,7 +42,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        .card-header h3 { font-size: .9rem; font-family: monospace; }
+        .card-header h3 { font-size: .9rem; font-family: 'Space Mono', monospace; }
         .qnum { font-size: .75rem; opacity: .75; }
         .card-body { padding: 1rem; }
         .desc { font-size: .82rem; color: #666; margin-bottom: .75rem; }
@@ -49,7 +55,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: .82rem;
-            font-family: monospace;
+            font-family: 'Space Mono', monospace;
             background: white;
             cursor: pointer;
         }
@@ -73,7 +79,7 @@
         .result table {
             width: 100%;
             border-collapse: collapse;
-            font-family: monospace;
+            font-family: 'Space Mono', monospace;
             font-size: .75rem;
         }
         .result th {
