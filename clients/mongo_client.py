@@ -22,6 +22,7 @@ import os
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from dotenv import load_dotenv
+import ssl
 
 load_dotenv(override = True)
 
@@ -42,7 +43,7 @@ def get_client():
     """
     global _client
     if _client is None:
-        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000, tls=True, tlsAllowInvalidCertificates=True)
         # Ping para validar la conexión al primer uso
         _client.admin.command("ping")
     return _client
