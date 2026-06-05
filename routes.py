@@ -563,3 +563,7 @@ def api_compatibles(animal_id):
 @bp.route("/api/personas/adoptantes")
 def api_adoptantes():
     return jsonify(neo4j_client.personas_que_adoptaron())
+
+@bp.route("/api/personas/<person_id>/grafo")
+def api_grafo(person_id):
+    return jsonify({"grafo": neo4j_client.grafo_compatibilidad(person_id)})
