@@ -145,3 +145,14 @@ def grafo_compatibilidad(person_id):
             LIMIT 10
         """, pid=person_id)
         return _clean(result)
+
+def grafo_compatibilidad(person_id):
+    with get_driver().session() as session:
+        result = session.run("""
+            MATCH (p:Persona {person_id: $pid})-[:COMPATIBLE_CON]->(a:Animal)
+            RETURN p.person_id AS persona_id, p.nombre AS persona_nombre,
+                   a.animal_id AS animal_id, a.nombre AS animal_nombre, a.tipo AS animal_tipo
+            ORDER BY rand()
+            LIMIT 10
+        """, pid=person_id)
+        return _clean(result)
