@@ -25,18 +25,51 @@ backend/
 ## Cómo correr
 
 ```bash
-# 1. Crear y activar el entorno virtual
+# 1. Levantar Cassandra local (docker compose)
+docker compose up -d cassandra cassandra-init
+# Esperá ~1–2 min la primera vez (download de imagen + bootstrap).
+
+# 2. Crear y activar el entorno virtual
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. Instalar dependencias
+# 3. Instalar dependencias
 pip install -r requirements.txt
 
-# 3. Correr el servidor
+# 4. Correr el servidor
 python app.py
 ```
 
-La app corre en `http://localhost:9200`.
+La app corre en `http://localhost:9200`. Cassandra escucha en `localhost:9042`.
+
+### Sembrar datos
+
+Desde la UI (pestaña Mantenimiento, frase "BORRAR Y SEMBRAR") o por CLI:
+
+```bash
+python seeder.py --truncate --n 2000
+```
+
+### Apagar / borrar todo
+
+```bash
+docker compose down              # apaga, mantiene datos
+docker compose down -v           # apaga y borra el volumen (DB en cero)
+```
+
+---
+
+## Herramientas para explorar Cassandra
+
+- **`cqlsh` (incluido en el contenedor)** — REPL oficial:
+  ```bash
+  docker compose exec cassandra cqlsh -u cassandra -p cassandra
+  ```
+- **[AxonOps Workbench](https://axonops.com/workbench/)** — app de escritorio
+  específica para Cassandra (free, multi-plataforma). Lo más cómodo para ver
+  schemas, ejecutar CQL y explorar particiones.
+- **[DBeaver Community](https://dbeaver.io/)** — cliente DB multi-motor;
+  agrega Cassandra con un driver JDBC.
 
 ---
 

@@ -18,6 +18,8 @@ Buenas prácticas aplicadas:
     - Funciones puras: reciben parámetros, retornan datos, no imprimen a stdout
 """
 
+from __future__ import annotations
+
 import os
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import PyMongoError, DuplicateKeyError

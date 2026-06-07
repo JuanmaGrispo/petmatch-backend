@@ -1,0 +1,51 @@
+services:
+  cassandra:
+    image: cassandra:5.0
+    container_name: petmatch-cassandra
+    restart: unless-stopped
+    ports:
+      - "9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: petmatch-cluster
+      CASSANDRA_DC: dc1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      # Auth opcional. Para deshabilitarla, comentá estas dos líneas:
+      CASSANDRA_AUTHENTICATOR: PasswordAuthenticator
+      CASSANDRA_AUTHORIZER: CassandraAuthorizer
+      # Tuning para máquinas chicas (laptop). Cassandra default = 4G heap.
+      MAX_HEAP_SIZE: "1G"
+      HEAP_NEWSIZE: "256M"
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+      - ./cassandra/init.cql:/docker-entrypoint-initdb.d/init.cql:ro
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "cqlsh -u cassandra -p cassandra -e 'DESCRIBE KEYSPACES' 127.0.0.1 9042 || exit 1"
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+
+  # Servicio efímero que corre una sola vez para crear el keyspace petmatch
+  # después de que Cassandra esté arriba. Es seguro reiniciarlo (IF NOT EXISTS).
+  cassandra-init:
+    image: cassandra:5.0
+    container_name: petmatch-cassandra-init
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./cassandra/init.cql:/init.cql:ro
+    entrypoint:
+      - bash
+      - -c
+      - |
+        echo "Cassandra healthy. Aplicando init.cql..."
+        cqlsh -u cassandra -p cassandra -f /init.cql cassandra 9042
+        echo "Keyspace petmatch listo."
+    restart: "no"
+
+volumes:
+  cassandra-data:
