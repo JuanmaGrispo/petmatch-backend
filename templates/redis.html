@@ -66,7 +66,7 @@
     font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: white;;
+    color: white;
   }
   header h1 span { color: white; }
 
@@ -552,7 +552,6 @@
                 <option value="nombre">nombre</option>
                 <option value="apellido">apellido</option>
                 <option value="email">email</option>
-                <option value="rol">rol</option>
               </select>
             </div>
             <div class="field">
@@ -686,6 +685,12 @@
             <div class="field">
               <label>Nombre</label>
               <input id="init_animal_nombre" placeholder="Rocky">
+            </div>
+          </div>
+          <div class="field-row single">
+            <div class="field">
+              <label>Visitas históricas previas</label>
+              <input id="init_visitas_historicas" type="number" min="0" placeholder="0 (opcional)">
             </div>
           </div>
           <div class="btn-row">
@@ -1000,10 +1005,13 @@ function obtenerVisitasHoy() {
 }
 
 function inicializarAnimal() {
-  api('POST', '/redis/animales', {
+  const historicas = document.getElementById('init_visitas_historicas').value;
+  const body = {
     animal_id: v('init_animal_id'),
     nombre:    v('init_animal_nombre')
-  }, null);
+  };
+  if (historicas !== '') body.visitas_historicas = parseInt(historicas);
+  api('POST', '/redis/animales', body, null);
 }
 
 // ────────────────────────────────────────────────────
