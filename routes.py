@@ -64,6 +64,59 @@ def samples():
     return jsonify(cassandra.get_sample_ids())
 
 
+# ─── Disparar evento — INSERT con fan-out denormalizado ─────────────────────
+
+VALID_EVENT_TYPES = {"visita", "favorito", "solicitud", "decision"}
+
+
+@bp.route("/cassandra/eventos", methods=["POST"])
+def crear_evento():
+    """
+    Inserta un evento parametrizable. Esta capa solo valida y serializa: el
+    fan-out a las tablas vive en el cliente (cassandra.insert_evento).
+    """
+    d = request.get_json(silent=True) or {}
+
+    user_id    = d.get("user_id")
+    pet_id     = d.get("pet_id")
+    shelter_id = d.get("shelter_id")
+    event_type = d.get("event_type")
+    details    = d.get("details") or None
+    status     = d.get("status")
+
+    # IDs obligatorios.
+    if not user_id or not pet_id or not shelter_id:
+        return jsonify({"error": "user_id, pet_id y shelter_id son obligatorios"}), 400
+
+    # event_type debe ser uno de los del dominio.
+    if event_type not in VALID_EVENT_TYPES:
+        return jsonify({
+            "error": "event_type inválido",
+            "permitidos": sorted(VALID_EVENT_TYPES),
+        }), 400
+
+    # status solo aplica a solicitud/decision; si no viene, default "pendiente".
+    if event_type in ("solicitud", "decision"):
+        status = status or "pendiente"
+    else:
+        status = None
+
+    try:
+        result = cassandra.insert_evento(
+            user_id=user_id,
+            pet_id=pet_id,
+            shelter_id=shelter_id,
+            event_type=event_type,
+            details=details,
+            status=status,
+        )
+    except ValueError as e:
+        # UUID mal formado u otro dato inválido del request.
+        return jsonify({"error": f"datos inválidos: {e}"}), 400
+
+    return jsonify({"ok": True, **result}), 201
+
+
 # ─── Seed (acción destructiva, triple confirmación) ─────────────────────────
 
 @bp.route("/cassandra/seed", methods=["POST"])
