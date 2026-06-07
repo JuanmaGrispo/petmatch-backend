@@ -160,6 +160,41 @@ header{padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wr
 .seed-out pre{background:var(--term-bg);color:var(--term-fg);padding:.75rem;border-radius:6px;overflow-x:auto;font-size:.74rem;font-family:var(--mono)}
 .ok-msg{color:#1f7a44;font-weight:700}
 
+/* ───── ALIASING (alias humano + UUID truncado) ───── */
+.uuidtag{font-family:var(--mono);font-size:.62rem;color:#8a7d6e;background:#f3e8d8;padding:.02rem .32rem;border-radius:4px;margin-left:.2rem}
+
+/* ───── VIEW: DISPARAR EVENTO ───── */
+.ev-wrap{padding:2rem;max-width:780px;margin:0 auto}
+.ev-intro{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.4rem}
+.ev-intro h2{font-size:1.15rem;color:var(--peach-deep);margin-bottom:.4rem}
+.ev-intro p{font-size:.86rem;color:#5e5345}
+.ev-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.4rem}
+.evf-grid{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:1.1rem}
+@media(max-width:560px){.evf-grid{grid-template-columns:1fr}}
+.evf-fg{display:flex;flex-direction:column}
+.evf-fg.evf-wide{grid-column:1/-1}
+.evf-fg label{font-size:.62rem;color:#a89a88;margin-bottom:.25rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
+.evf-fg select,.evf-fg input{padding:.5rem .6rem;border:1px solid var(--line);border-radius:8px;font-size:.82rem;font-family:var(--mono);background:#fffdf9;color:var(--ink)}
+.evf-fire{width:100%;padding:.75rem;font-size:.92rem}
+/* feedback del insert */
+.ev-feedback{margin-top:1.4rem}
+.ev-ok{background:var(--term-bg);color:var(--term-fg);border-radius:12px;padding:1.4rem;border:1px solid #243430}
+.ev-ok-h{font-size:1.05rem;font-weight:700;color:#7fe3c4;margin-bottom:1rem}
+.ev-meta{display:flex;flex-direction:column;gap:.55rem;margin-bottom:1.1rem}
+.ev-meta>div{display:flex;flex-direction:column;gap:.18rem}
+.ev-meta .lbl{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:#7e9c96}
+.ev-meta code{font-family:var(--mono);font-size:.82rem;color:#ffe14d;word-break:break-all}
+.ev-fan-h{font-family:var(--mono);font-size:.7rem;color:#9fc0ba;margin-bottom:.6rem}
+.ev-fan{display:flex;flex-direction:column;gap:.45rem;margin-bottom:1.1rem}
+.ev-fan-row{font-family:var(--mono);font-size:.8rem;background:#0e1716;border:1px solid #243430;border-left:3px solid #5fae9e;border-radius:0 8px 8px 0;padding:.55rem .8rem;opacity:0;transform:translateX(-12px);transition:opacity .35s,transform .35s}
+.ev-fan-row.show{opacity:1;transform:none}
+.ev-fan-row .ev-arrow{color:#5fae9e;font-weight:700}
+.ev-fan-row code{color:#f3c378}
+.ev-see{width:100%}
+/* resalte de la fila recién insertada en las consultas */
+.fitem.hl,.req.hl{animation:flashrow 1s ease-in-out 0s 3;border-color:var(--peach-deep)!important;box-shadow:0 0 0 2px rgba(224,122,62,.45)}
+@keyframes flashrow{0%,100%{background:var(--card)}50%{background:#ffe9d6}}
+
 footer{text-align:center;padding:1.4rem;font-family:var(--mono);font-size:.66rem;color:#a89a88;background:var(--app-bg);border-top:1px solid var(--line)}
 </style>
 </head>
@@ -174,6 +209,7 @@ footer{text-align:center;padding:1.4rem;font-family:var(--mono);font-size:.66rem
 
 <div class="toptabs">
   <div class="toptab active" data-v="pantallas" onclick="topTab('pantallas',this)">Pantallas</div>
+  <div class="toptab" data-v="evento" onclick="topTab('evento',this)">▶ Disparar evento</div>
   <div class="toptab" data-v="chebotko" onclick="topTab('chebotko',this)">Diagrama Chebotko</div>
   <div class="toptab danger" data-v="mantenimiento" onclick="topTab('mantenimiento',this)">Mantenimiento</div>
 </div>
@@ -234,6 +270,24 @@ footer{text-align:center;padding:1.4rem;font-family:var(--mono);font-size:.66rem
   </div>
 </div>
 
+<!-- ════════ VIEW DISPARAR EVENTO ════════ -->
+<div id="view-evento" class="view">
+  <div class="ev-wrap">
+    <div class="ev-intro">
+      <h2>▶ Disparar un evento real</h2>
+      <p>Elegí los participantes y el tipo de evento. Al dispararlo, el backend
+      genera un <code>event_id</code> nuevo y escribe la misma información en
+      varias tablas a la vez (<b>fan-out denormalizado</b>). Después podés verlo
+      aparecer arriba de todo en las consultas: la prueba de que la base está
+      viva y no hay nada hardcodeado.</p>
+    </div>
+    <div class="ev-card">
+      <div id="ev-form"></div>
+    </div>
+    <div id="ev-feedback" class="ev-feedback"></div>
+  </div>
+</div>
+
 <!-- ════════ VIEW MANTENIMIENTO ════════ -->
 <div id="view-mantenimiento" class="view">
   <div class="maint-wrap">
@@ -291,7 +345,31 @@ async function loadSamples(){
     led.className='led err';txt.textContent='sin conexión — mostrá Mantenimiento o revisá el backend';
   }
   renderScreen();
+  // Repoblar el formulario de "Disparar evento" con los samples frescos
+  // (importante después de un re-seed, que cambia el pool de UUIDs).
+  buildEventForm();
 }
+
+// ════════════════════════════════════════════════════════════════
+//  ALIASING — capa de legibilidad (alias humano + UUID truncado)
+// ════════════════════════════════════════════════════════════════
+// La base no guarda nombres: derivamos un alias DETERMINÍSTICO desde el UUID
+// (mismo UUID -> mismo alias, siempre). Es SOLO presentación: todas las
+// llamadas al backend siguen usando el UUID crudo. El UUID truncado queda
+// SIEMPRE visible al lado del alias para no esconder la capa de ingeniería.
+const ALIAS={
+  users:['Ana','Bruno','Caro','Diego','Eli','Fede','Gabi','Hugo','Inés','Joaco','Kari','Lu','Mati','Nico','Oli','Pau','Quim','Rocío','Santi','Tomi','Uma','Vale','Wanda','Xime','Yago','Zoe','Bauti','Cami','Dani','Emi'],
+  pets:['Toby','Luna','Rocky','Mía','Coco','Nina','Simba','Kira','Zeus','Lola','Max','Frida','Bobby','Maya','Thor','Cleo','Duke','Nala','Oso','Pelusa','Canela','Lucas','Otto','Mora'],
+  shelters:['Patitas','Huellitas','El Refugio','Cuatro Patas','San Roque','Amigos','Esperanza','La Manada','Corazón Animal','Rescate Sur'],
+};
+const EMO={users:'🧑',pets:'🐶',shelters:'🏠'};
+// djb2: hash estable sobre el string del UUID -> índice en la lista de alias
+function hashU(s){let h=5381;s=''+s;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return h;}
+function aliasName(kind,uuid){const a=ALIAS[kind]||[];return (!a.length||!uuid)?'':a[hashU(uuid)%a.length];}
+// etiqueta de texto plano para <option>: "🧑 Ana (a3f8…91c)"
+function aliasLabel(kind,uuid){return uuid?`${EMO[kind]||''} ${aliasName(kind,uuid)} (${trunc(uuid)})`:'—';}
+// chip HTML para filas: alias + UUID truncado resaltado
+function aliasChip(kind,uuid){return uuid?`${EMO[kind]||''} ${aliasName(kind,uuid)}<span class="uuidtag">${trunc(uuid)}</span>`:'';}
 
 // ════════════════════════════════════════════════════════════════
 //  DEFINICIÓN DE PANTALLAS
@@ -365,28 +443,30 @@ const SCREENS={
 };
 
 // ── render helpers (lado app) ──
+// HL_EID: event_id de la fila recién insertada, para resaltarla unos segundos.
+const hlAttr=e=>`${e.event_id&&e.event_id===HL_EID?' hl':''}" data-eid="${e.event_id||''}`;
 function feed(rows,showUser){
   if(!rows||!rows.length)return '<div class="empty">Sin actividad.</div>';
   return `<div class="feed">${rows.map(e=>{
     const m=ICON[e.event_type]||{i:'•',l:e.event_type};
     const st=e.status?`<span class="statusbadge ${e.status}">${e.status}</span>`:'';
-    return `<div class="fitem"><div class="thumb ${e.event_type}">${m.i}</div>
+    return `<div class="fitem${hlAttr(e)}"><div class="thumb ${e.event_type}">${m.i}</div>
       <div class="info"><div class="l1">${m.l} ${st}</div>
-      <div class="l2">${showUser&&e.user_id?'👤 '+trunc(e.user_id)+' · ':''}${e.pet_id?'🐶 '+trunc(e.pet_id):''}</div></div>
+      <div class="l2">${showUser&&e.user_id?aliasChip('users',e.user_id)+' · ':''}${aliasChip('pets',e.pet_id)}</div></div>
       <div class="t">${fmtShort(e.date)}</div></div>`;
   }).join('')}</div>`;
 }
 function solList(rows){
   if(!rows||!rows.length)return '<div class="empty">Sin solicitudes.</div>';
-  return `<div class="feed">${rows.map(e=>`<div class="fitem"><div class="thumb solicitud">📨</div>
-    <div class="info"><div class="l1">🐶 ${trunc(e.pet_id)} <span class="statusbadge ${e.status||'pendiente'}">${e.status||'pendiente'}</span></div>
-    <div class="l2">${e.shelter_id?'🏠 '+trunc(e.shelter_id):''}</div></div>
+  return `<div class="feed">${rows.map(e=>`<div class="fitem${hlAttr(e)}"><div class="thumb solicitud">📨</div>
+    <div class="info"><div class="l1">${aliasChip('pets',e.pet_id)} <span class="statusbadge ${e.status||'pendiente'}">${e.status||'pendiente'}</span></div>
+    <div class="l2">${aliasChip('shelters',e.shelter_id)}</div></div>
     <div class="t">${fmtShort(e.date)}</div></div>`).join('')}</div>`;
 }
 function reqList(rows){
   if(!rows||!rows.length)return '<div class="empty">No hay solicitudes con ese estado. 🎉</div>';
-  return `<div class="feed">${rows.map(e=>`<div class="req"><div class="who">${(''+(e.user_id||'?')).slice(0,1).toUpperCase()}</div>
-    <div class="info"><b>👤 ${trunc(e.user_id)}</b> quiere a <b>🐶 ${trunc(e.pet_id)}</b><small>${fmtLong(e.date)} ${e.details?'· '+e.details:''}</small></div>
+  return `<div class="feed">${rows.map(e=>`<div class="req${hlAttr(e)}"><div class="who">${(aliasName('users',e.user_id)||'?').slice(0,1).toUpperCase()}</div>
+    <div class="info"><b>${aliasChip('users',e.user_id)}</b> quiere a <b>${aliasChip('pets',e.pet_id)}</b><small>${fmtLong(e.date)} ${e.details?'· '+esc(e.details):''}</small></div>
     <span class="statusbadge ${e.status||'pendiente'}">${e.status||'pendiente'}</span></div>`).join('')}</div>`;
 }
 function fmtShort(d){if(!d)return '';const x=new Date(d);return isNaN(x)?(''+d).slice(5,16):(x.getDate()+'/'+(x.getMonth()+1));}
@@ -400,6 +480,7 @@ let current='actividad';
 let ctlState={};
 let lastRows=[];
 let view2='abs';
+let HL_EID=null;
 
 function buildSidebar(){
   const groups={};
@@ -415,7 +496,7 @@ function buildControls(){
   const fields=s.controls.map(c=>{
     if(c.pool){
       const ids=SAMPLES[c.pool]||[];
-      const opts=ids.length?ids.map(v=>`<option value="${v}">${trunc(v)}</option>`).join(''):'<option value="" disabled>sin samples</option>';
+      const opts=ids.length?ids.map(v=>`<option value="${v}">${aliasLabel(c.pool,v)}</option>`).join(''):'<option value="" disabled>sin samples</option>';
       return `<div class="ctl-fg"><label>${c.label}</label><select data-k="${c.k}">${opts}</select></div>`;
     }
     if(c.opts)return `<div class="ctl-fg"><label>${c.label}</label><select data-k="${c.k}">${c.opts.map(v=>`<option>${v}</option>`).join('')}</select></div>`;
@@ -467,6 +548,15 @@ function paint(){
   const s=SCREENS[current];
   document.getElementById('ph-body').innerHTML=`<div class="screen-intro">${s.intro}</div>`+s.renderApp(lastRows);
   renderRawMini();
+  flashHighlight();
+}
+// Resalta y centra la fila recién insertada (si HL_EID coincide), y la apaga
+// después de unos segundos.
+function flashHighlight(){
+  if(!HL_EID)return;
+  const el=document.querySelector('#ph-body [data-eid="'+HL_EID+'"]');
+  if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>{HL_EID=null;document.querySelectorAll('#ph-body .hl').forEach(x=>x.classList.remove('hl'));},4500);
 }
 function setView2(v){view2=v;document.getElementById('tg-abs').classList.toggle('on',v==='abs');document.getElementById('tg-raw').classList.toggle('on',v==='raw');renderRawMini();}
 function renderRawMini(){
@@ -501,6 +591,115 @@ function buildCheb(){
 }
 
 // ════════════════════════════════════════════════════════════════
+//  DISPARAR EVENTO (INSERT real con fan-out)
+// ════════════════════════════════════════════════════════════════
+let LAST_INSERT=null;
+const val=id=>{const el=document.getElementById(id);return el?el.value:'';};
+
+function buildEventForm(){
+  const sel=(kind,k)=>{
+    const ids=SAMPLES[kind]||[];
+    const opts=ids.length?ids.map(v=>`<option value="${v}">${aliasLabel(kind,v)}</option>`).join('')
+                         :'<option value="" disabled>sin samples — sembrá primero</option>';
+    return `<select id="ev-${k}">${opts}</select>`;
+  };
+  document.getElementById('ev-form').innerHTML=`
+    <div class="evf-grid">
+      <div class="evf-fg"><label>usuario</label>${sel('users','user_id')}</div>
+      <div class="evf-fg"><label>perro</label>${sel('pets','pet_id')}</div>
+      <div class="evf-fg"><label>refugio</label>${sel('shelters','shelter_id')}</div>
+      <div class="evf-fg"><label>tipo de evento</label>
+        <select id="ev-event_type" onchange="toggleStatus()">
+          <option value="visita">🐾 visita</option>
+          <option value="favorito">❤️ favorito</option>
+          <option value="solicitud">📨 solicitud</option>
+          <option value="decision">⚖️ decision</option>
+        </select></div>
+      <div class="evf-fg" id="ev-status-wrap" style="display:none"><label>estado</label>
+        <select id="ev-status">
+          <option value="pendiente">pendiente</option>
+          <option value="aprobada">aprobada</option>
+          <option value="rechazada">rechazada</option>
+        </select></div>
+      <div class="evf-fg evf-wide"><label>detalle (opcional)</label>
+        <input id="ev-details" type="text" placeholder="ej: Segunda visita, jugó en el patio…"></div>
+    </div>
+    <button class="btn evf-fire" onclick="dispararEvento()">▶ Disparar evento</button>`;
+}
+function toggleStatus(){
+  const t=val('ev-event_type');
+  document.getElementById('ev-status-wrap').style.display=(t==='solicitud'||t==='decision')?'':'none';
+}
+
+async function dispararEvento(){
+  const body={
+    user_id:val('ev-user_id'),
+    pet_id:val('ev-pet_id'),
+    shelter_id:val('ev-shelter_id'),
+    event_type:val('ev-event_type'),
+  };
+  const det=val('ev-details').trim();
+  if(det)body.details=det;
+  if(body.event_type==='solicitud'||body.event_type==='decision')body.status=val('ev-status');
+  const out=document.getElementById('ev-feedback');
+  if(!body.user_id||!body.pet_id||!body.shelter_id){
+    out.innerHTML='<div class="errbox">Faltan participantes — ¿sembraste la base?</div>';return;
+  }
+  out.innerHTML='<div class="loading">Escribiendo en Cassandra…</div>';
+  try{
+    const res=await fetch(`${API_BASE}/eventos`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json();
+    if(!res.ok){out.innerHTML=`<div class="errbox">Error ${res.status}: ${esc(data.error||JSON.stringify(data))}</div>`;return;}
+    LAST_INSERT={event_id:data.event_id,user_id:body.user_id,pet_id:body.pet_id,shelter_id:body.shelter_id};
+    renderInsertFeedback(data,body);
+  }catch(e){out.innerHTML=`<div class="errbox">Sin conexión con el backend.<br><small>${esc(e.message)}</small></div>`;}
+}
+
+function renderInsertFeedback(data,body){
+  const out=document.getElementById('ev-feedback');
+  out.innerHTML=`
+    <div class="ev-ok">
+      <div class="ev-ok-h">✓ Evento escrito en Cassandra</div>
+      <div class="ev-meta">
+        <div><span class="lbl">event_id (lo generó el backend)</span><code>${esc(data.event_id)}</code></div>
+        <div><span class="lbl">fecha real (UTC)</span><code>${esc(data.date)}</code></div>
+        <div><span class="lbl">evento</span><code>${esc(body.event_type)}${body.status?' · '+esc(body.status):''}</code></div>
+      </div>
+      <div class="ev-fan-h">fan-out denormalizado → ${data.tablas.length} tabla(s):</div>
+      <div class="ev-fan" id="ev-fan"></div>
+      <button class="btn teal ev-see" id="ev-see" style="display:none" onclick="verEnConsultas()">🔎 Ver en las consultas</button>
+    </div>`;
+  // Aparición animada de cada INSERT, una por una.
+  const fan=document.getElementById('ev-fan');
+  data.tablas.forEach((t,i)=>{
+    setTimeout(()=>{
+      const row=document.createElement('div');
+      row.className='ev-fan-row';
+      row.innerHTML=`<span class="ev-arrow">INSERT →</span> <code>${esc(t)}</code>`;
+      fan.appendChild(row);
+      requestAnimationFrame(()=>row.classList.add('show'));
+      if(i===data.tablas.length-1){const b=document.getElementById('ev-see');if(b)b.style.display='';}
+    },230*(i+1));
+  });
+}
+
+// Salta a "Mi actividad" del usuario usado, re-ejecuta la consulta y resalta
+// el evento recién creado (aparece arriba de todo por ser el más reciente).
+function verEnConsultas(){
+  if(!LAST_INSERT)return;
+  HL_EID=LAST_INSERT.event_id;
+  current='actividad';
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.toptab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-pantallas').classList.add('active');
+  document.querySelector('.toptab[data-v="pantallas"]').classList.add('active');
+  renderScreen();
+  const selUser=document.querySelector('#controls [data-k="user_id"]');
+  if(selUser){selUser.value=LAST_INSERT.user_id;readCtl();updateCql();}
+  exec();
+}
+
+// ════════════════════════════════════════════════════════════════
 //  SEED
 // ════════════════════════════════════════════════════════════════
 async function seed(){
@@ -526,6 +725,7 @@ function topTab(v,el){
   document.querySelectorAll('.toptab').forEach(x=>x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');el.classList.add('active');
   if(v==='chebotko')buildCheb();
+  if(v==='evento')buildEventForm();
 }
 loadSamples();
 </script>
