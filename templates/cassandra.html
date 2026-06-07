@@ -195,6 +195,40 @@ header{padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wr
 .fitem.hl,.req.hl{animation:flashrow 1s ease-in-out 0s 3;border-color:var(--peach-deep)!important;box-shadow:0 0 0 2px rgba(224,122,62,.45)}
 @keyframes flashrow{0%,100%{background:var(--card)}50%{background:#ffe9d6}}
 
+/* ───── VIEW: CONSOLA CQL ───── */
+.cql-wrap{padding:2rem;max-width:980px;margin:0 auto}
+.cql-intro{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.2rem}
+.cql-intro h2{font-size:1.15rem;color:var(--teal-deep);margin-bottom:.4rem}
+.cql-intro p{font-size:.86rem;color:#5e5345}
+.cql-intro kbd{font-family:var(--mono);font-size:.72rem;background:#efe6d9;border:1px solid var(--line);border-radius:4px;padding:.05rem .35rem}
+.cql-warn{margin-top:.8rem;background:#fbe7e3;border-left:4px solid var(--coral);padding:.55rem .85rem;font-size:.78rem;color:#a8392a;border-radius:4px}
+.cql-examples{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1rem}
+.cql-chip{font-family:var(--mono);font-size:.7rem;background:var(--card);border:1px solid var(--line);color:#5e5345;padding:.35rem .65rem;border-radius:14px;cursor:pointer}
+.cql-chip:hover{background:#f3e8d8;border-color:var(--peach)}
+.cql-term{background:var(--term-bg);border:1px solid #243430;border-radius:12px;padding:1rem 1.1rem;box-shadow:0 10px 30px -16px rgba(0,0,0,.5)}
+.cql-prompt{font-family:var(--mono);font-size:.74rem;color:#5fae9e;margin-bottom:.4rem}
+.cql-ps{color:#7fe3c4;font-weight:700}
+#cql-input{width:100%;min-height:120px;resize:vertical;background:#0e1716;color:#e6f2ee;border:1px solid #243430;border-radius:8px;padding:.7rem .85rem;font-family:var(--mono);font-size:.86rem;line-height:1.55;outline:none}
+#cql-input:focus{border-color:#5fae9e}
+.cql-bar{display:flex;align-items:center;justify-content:space-between;margin-top:.7rem}
+.cql-hint{font-family:var(--mono);font-size:.66rem;color:#7e9c96}
+.cql-run{background:var(--teal)}.cql-run:hover{background:var(--teal-deep)}
+.cql-out{margin-top:1.2rem}
+.cql-status{font-family:var(--mono);font-size:.74rem;margin-bottom:.5rem}
+.cql-status.ok{color:#1f7a44}.cql-status.err{color:var(--coral)}
+.cql-errbox{font-family:var(--mono);font-size:.8rem;background:#2a1614;color:#ffb4a6;border:1px solid #5a2a24;border-left:3px solid var(--coral);border-radius:0 8px 8px 0;padding:.8rem 1rem;white-space:pre-wrap;word-break:break-word}
+.cql-table-wrap{overflow-x:auto;border:1px solid #243430;border-radius:10px}
+.cql-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;background:var(--term-bg)}
+.cql-table th{position:sticky;top:0;background:#0e1716;color:#7fe3c4;text-align:left;padding:.5rem .75rem;border-bottom:1px solid #243430;white-space:nowrap}
+.cql-table td{padding:.42rem .75rem;border-bottom:1px solid #1c2826;color:#cfe3df;word-break:break-word;vertical-align:top}
+.cql-table tr:hover td{background:#13201e}
+.cql-null{color:#5a7068;font-style:italic}
+.cql-empty{font-family:var(--mono);font-size:.78rem;color:#7e9c96;padding:.8rem;border:1px dashed #243430;border-radius:8px;text-align:center}
+.cql-hist-h{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:#a89a88;margin:1.4rem 0 .5rem}
+.cql-hist{display:flex;flex-direction:column;gap:.35rem}
+.cql-hist-item{font-family:var(--mono);font-size:.72rem;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:.4rem .6rem;color:#5e5345;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cql-hist-item:hover{background:#f3e8d8}
+
 footer{text-align:center;padding:1.4rem;font-family:var(--mono);font-size:.66rem;color:#a89a88;background:var(--app-bg);border-top:1px solid var(--line)}
 </style>
 </head>
@@ -210,6 +244,7 @@ footer{text-align:center;padding:1.4rem;font-family:var(--mono);font-size:.66rem
 <div class="toptabs">
   <div class="toptab active" data-v="pantallas" onclick="topTab('pantallas',this)">Pantallas</div>
   <div class="toptab" data-v="evento" onclick="topTab('evento',this)">▶ Disparar evento</div>
+  <div class="toptab" data-v="cql" onclick="topTab('cql',this)">⌨ Consola CQL</div>
   <div class="toptab" data-v="chebotko" onclick="topTab('chebotko',this)">Diagrama Chebotko</div>
   <div class="toptab danger" data-v="mantenimiento" onclick="topTab('mantenimiento',this)">Mantenimiento</div>
 </div>
@@ -285,6 +320,35 @@ footer{text-align:center;padding:1.4rem;font-family:var(--mono);font-size:.66rem
       <div id="ev-form"></div>
     </div>
     <div id="ev-feedback" class="ev-feedback"></div>
+  </div>
+</div>
+
+<!-- ════════ VIEW CONSOLA CQL ════════ -->
+<div id="view-cql" class="view">
+  <div class="cql-wrap">
+    <div class="cql-intro">
+      <h2>⌨ Consola CQL</h2>
+      <p>Ejecutá CQL directo contra el keyspace <code>petmatch</code>, como si
+      fuera <code>cqlsh</code>. Una sentencia por vez. <b>Atajo:</b>
+      <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> para ejecutar.</p>
+      <div class="cql-warn">⚠ Consola sin restricciones: corre <b>SELECT, INSERT, UPDATE, DELETE y DDL (DROP/TRUNCATE)</b>. Lo que escribas acá impacta la base real.</div>
+    </div>
+
+    <div class="cql-examples" id="cql-examples"></div>
+
+    <div class="cql-term">
+      <div class="cql-prompt"><span class="cql-ps">cqlsh:petmatch&gt;</span></div>
+      <textarea id="cql-input" spellcheck="false" onkeydown="cqlKey(event)" placeholder="SELECT * FROM eventos_por_usuario LIMIT 10;"></textarea>
+      <div class="cql-bar">
+        <span class="cql-hint">⌘/Ctrl + Enter</span>
+        <button class="btn cql-run" onclick="runCql()">▶ Ejecutar</button>
+      </div>
+    </div>
+
+    <div id="cql-out" class="cql-out"></div>
+
+    <div class="cql-hist-h" id="cql-hist-h" style="display:none">historial (clic para reusar)</div>
+    <div id="cql-hist" class="cql-hist"></div>
   </div>
 </div>
 
@@ -700,6 +764,83 @@ function verEnConsultas(){
 }
 
 // ════════════════════════════════════════════════════════════════
+//  CONSOLA CQL (ejecutar CQL arbitrario, estilo cqlsh)
+// ════════════════════════════════════════════════════════════════
+let CQL_HIST=[];
+
+// Atajos / ejemplos. Algunos se arman con un UUID real de los samples para
+// mostrar una query con WHERE que de verdad devuelva filas.
+function buildCqlExamples(){
+  const u=(SAMPLES.users&&SAMPLES.users[0])||null;
+  const ex=[
+    ['10 eventos','SELECT * FROM eventos_por_usuario LIMIT 10;'],
+    ['solicitudes de refugio','SELECT * FROM solicitudes_por_refugio LIMIT 10;'],
+    ['contar eventos','SELECT COUNT(*) FROM eventos_por_perro;'],
+    ['describe tablas','DESCRIBE TABLES;'],
+    ['describe keyspace','DESCRIBE KEYSPACE petmatch;'],
+  ];
+  if(u)ex.push(['actividad de un usuario',`SELECT date, event_type, pet_id FROM eventos_por_usuario WHERE user_id = ${u};`]);
+  document.getElementById('cql-examples').innerHTML=ex.map(([l,q])=>
+    `<span class="cql-chip" data-q="${esc(q)}" onclick="setCql(this.getAttribute('data-q'))">${esc(l)}</span>`).join('');
+}
+
+function setCql(q){const ta=document.getElementById('cql-input');ta.value=q;ta.focus();}
+function cqlKey(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();runCql();}}
+
+async function runCql(){
+  const q=document.getElementById('cql-input').value.trim();
+  const out=document.getElementById('cql-out');
+  if(!q){out.innerHTML='<div class="cql-status err">✗ Escribí una sentencia CQL.</div>';return;}
+  out.innerHTML='<div class="cql-status">Ejecutando…</div>';
+  try{
+    const res=await fetch(`${API_BASE}/cql`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});
+    const data=await res.json();
+    if(!res.ok){
+      out.innerHTML=`<div class="cql-status err">✗ ${esc(data.type||'Error '+res.status)}</div>`+
+                    `<div class="cql-errbox">${esc(data.error||JSON.stringify(data))}</div>`;
+    }else{
+      renderCqlResult(data);
+    }
+    pushCqlHist(q);
+  }catch(e){
+    out.innerHTML=`<div class="cql-status err">✗ Sin conexión con el backend</div>`+
+                  `<div class="cql-errbox">${esc(e.message)}</div>`;
+  }
+}
+
+function renderCqlResult(data){
+  const out=document.getElementById('cql-out');
+  // Escritura / DDL: sin columnas ni filas.
+  if((!data.columns||!data.columns.length)&&data.row_count===0){
+    out.innerHTML='<div class="cql-status ok">✓ OK · sentencia aplicada (0 filas devueltas)</div>';
+    return;
+  }
+  // SELECT que no matchea nada: mostramos las columnas igual.
+  if(!data.rows.length){
+    out.innerHTML='<div class="cql-status ok">✓ OK · 0 filas</div>'+
+      `<div class="cql-empty">Sin filas · columnas: ${data.columns.map(esc).join(', ')||'—'}</div>`;
+    return;
+  }
+  const head=data.columns.map(c=>`<th>${esc(c)}</th>`).join('');
+  const body=data.rows.map(r=>`<tr>${r.map(cell=>
+    cell===null?'<td><span class="cql-null">null</span></td>':`<td>${esc(''+cell)}</td>`).join('')}</tr>`).join('');
+  out.innerHTML=`<div class="cql-status ok">✓ ${data.row_count} fila(s)</div>`+
+    `<div class="cql-table-wrap"><table class="cql-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function pushCqlHist(q){
+  CQL_HIST=[q,...CQL_HIST.filter(x=>x!==q)].slice(0,8);
+  renderCqlHist();
+}
+function renderCqlHist(){
+  const h=document.getElementById('cql-hist'),hh=document.getElementById('cql-hist-h');
+  if(!CQL_HIST.length){hh.style.display='none';h.innerHTML='';return;}
+  hh.style.display='';
+  h.innerHTML=CQL_HIST.map(q=>
+    `<div class="cql-hist-item" title="${esc(q)}" data-q="${esc(q)}" onclick="setCql(this.getAttribute('data-q'))">${esc(q)}</div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════════════
 //  SEED
 // ════════════════════════════════════════════════════════════════
 async function seed(){
@@ -726,6 +867,7 @@ function topTab(v,el){
   document.getElementById('view-'+v).classList.add('active');el.classList.add('active');
   if(v==='chebotko')buildCheb();
   if(v==='evento')buildEventForm();
+  if(v==='cql')buildCqlExamples();
 }
 loadSamples();
 </script>
