@@ -728,6 +728,9 @@ function renderInsertFeedback(data,body){
         <div><span class="lbl">event_id (lo generó el backend)</span><code>${esc(data.event_id)}</code></div>
         <div><span class="lbl">fecha real (UTC)</span><code>${esc(data.date)}</code></div>
         <div><span class="lbl">evento</span><code>${esc(body.event_type)}${body.status?' · '+esc(body.status):''}</code></div>
+        <div><span class="lbl">user_id ${EMO.users} ${esc(aliasName('users',body.user_id))}</span><code>${esc(body.user_id)}</code></div>
+        <div><span class="lbl">pet_id ${EMO.pets} ${esc(aliasName('pets',body.pet_id))}</span><code>${esc(body.pet_id)}</code></div>
+        <div><span class="lbl">shelter_id ${EMO.shelters} ${esc(aliasName('shelters',body.shelter_id))}</span><code>${esc(body.shelter_id)}</code></div>
       </div>
       <div class="ev-fan-h">fan-out denormalizado → ${data.tablas.length} tabla(s):</div>
       <div class="ev-fan" id="ev-fan"></div>
