@@ -117,6 +117,30 @@ def crear_evento():
     return jsonify({"ok": True, **result}), 201
 
 
+# ─── Consola CQL — ejecutar CQL arbitrario (estilo cqlsh) ───────────────────
+
+@bp.route("/cassandra/cql", methods=["POST"])
+def ejecutar_cql():
+    """
+    Ejecuta una sentencia CQL y devuelve el resultado tabular. Capa HTTP fina:
+    el execute vive en el cliente (cassandra.run_cql).
+    """
+    d = request.get_json(silent=True) or {}
+    query = d.get("query", "")
+
+    if not query or not query.strip():
+        return jsonify({"error": "query vacía"}), 400
+
+    try:
+        result = cassandra.run_cql(query)
+    except Exception as e:
+        # Cualquier error de CQL (sintaxis, tabla inexistente, tipo inválido…)
+        # se devuelve como 400 con el mensaje crudo del driver, como en cqlsh.
+        return jsonify({"error": str(e), "type": type(e).__name__}), 400
+
+    return jsonify({"ok": True, **result})
+
+
 # ─── Seed (acción destructiva, triple confirmación) ─────────────────────────
 
 @bp.route("/cassandra/seed", methods=["POST"])
