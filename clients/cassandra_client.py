@@ -413,3 +413,44 @@ def insert_evento(user_id, pet_id, shelter_id, event_type, details=None, status=
         "date": date.isoformat(),
         "tablas": tablas,
     }
+
+
+# ─── Consola CQL (ejecutar CQL arbitrario, estilo cqlsh) ────────────────────
+
+def _cell(value):
+    """Serializa un valor de celda a algo JSON-friendly para la consola:
+    uuid/datetime/colecciones/blobs caen a str; los escalares pasan tal cual."""
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if hasattr(value, "isoformat"):   # datetime / date
+        return value.isoformat()
+    return str(value)                 # uuid, set/list/map, Decimal, blob, etc.
+
+
+def run_cql(query: str) -> dict:
+    """
+    Ejecuta una sentencia CQL arbitraria contra el keyspace y devuelve el
+    resultado en forma tabular (columnas + filas), como haría cqlsh.
+
+    Es una consola sin restricciones (SELECT/INSERT/UPDATE/DELETE/DDL): la
+    decisión de exponer todo es deliberada para la demo. Se ejecuta UNA
+    sentencia por vez (el driver no acepta múltiples sentencias separadas por
+    ';'). Los errores de CQL (sintaxis, tabla inexistente, etc.) se propagan
+    para que la ruta los traduzca a un 400 con el mensaje del driver.
+
+    Devuelve:
+        {columns: [...], rows: [[...], ...], row_count: N}
+    Para escrituras/DDL que no devuelven filas, columns=[] y row_count=0.
+    """
+    query = (query or "").strip().rstrip(";").strip()
+    if not query:
+        raise ValueError("query vacía")
+
+    result = get_session().execute(query)
+
+    columns = list(result.column_names or [])
+    rows = [[_cell(getattr(r, col)) for col in columns] for r in result]
+
+    return {"columns": columns, "rows": rows, "row_count": len(rows)}
