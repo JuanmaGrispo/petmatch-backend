@@ -412,18 +412,39 @@ def mongo_c2():
 def mongo_c3():
     return jsonify(mongo.consulta_3_reporte_por_estado_y_tipo())
 
-# ─── C4 — animales por inicial de nombre ────────────────────────────────────
+# ─── C4 — buscador de texto libre (nombre o raza) ───────────────────────────
 
 @bp.route("/mongo/c4/animales", methods=["GET"])
 def mongo_c4():
-    letra = request.args.get("letra", "A")
-    return jsonify(mongo.consulta_4_animales_por_inicial(letra))
+    texto = request.args.get("q", "")
+    return jsonify(mongo.consulta_4_buscador(texto))
+
+# ─── Búsqueda dinámica (typeahead: nombre / apellido / ID) ──────────────────
+# Endpoint que faltaba: el front (mongo.html) llama a /mongo/buscar/<coleccion>
+# tanto desde el typeahead como desde resolverId(). Sin esto, la búsqueda por
+# nombre devolvía 404 y solo funcionaba el ID exacto.
+
+@bp.route("/mongo/buscar/<coleccion>", methods=["GET"])
+def mongo_buscar(coleccion):
+    texto = request.args.get("q", "")
+    if coleccion == "animales":
+        return jsonify(mongo.buscar_animales_dinamico(texto))
+    elif coleccion == "adoptantes":
+        return jsonify(mongo.buscar_adoptantes_dinamico(texto))
+    return jsonify({"error": "colección no reconocida"}), 400
 
 # ─── C5 — adoptantes con animal asignado ────────────────────────────────────
 
 @bp.route("/mongo/c5/adoptantes", methods=["GET"])
 def mongo_c5():
     return jsonify(mongo.consulta_5_adoptantes_con_animal())
+
+# ─── C6 — animales por vacuna (array embebido, $elemMatch) ───────────────────
+
+@bp.route("/mongo/c6/animales", methods=["GET"])
+def mongo_c6():
+    vacuna = request.args.get("vacuna", "")
+    return jsonify(mongo.consulta_6_animales_por_vacuna(vacuna))
 
 # ─── CRUD animales ───────────────────────────────────────────────────────────
 
@@ -514,7 +535,6 @@ def mongo_exportar():
     if not ruta:
         return jsonify({"error": "No hay datos para exportar"}), 404
     return send_file(ruta, as_attachment=True)
-
 # ════════════════════════════════════════════════════════════════════════════
 # NEO4J
 # ════════════════════════════════════════════════════════════════════════════

@@ -96,6 +96,14 @@ def render_details(faker: Faker, event_type: str) -> str:
     return template.format(name=faker.first_name())
 
 
+def _slug(texto: str) -> str:
+    """Normaliza un texto para usarlo en un email: quita acentos, espacios
+    y caracteres raros, y lo pasa a minúsculas. 'José Pérez' → 'jose.perez'."""
+    import unicodedata
+    t = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode("ascii")
+    return t.lower().replace(" ", "").replace("'", "")
+
+
 # ─── Statements preparados ──────────────────────────────────────────────────
 
 def prepare_statements(session) -> dict:
@@ -274,6 +282,19 @@ COLORES = [
     "Negro", "Blanco", "Marrón", "Gris", "Naranja",
     "Blanco y Negro", "Marrón y Blanco", "Tricolor",
 ]
+
+# Catálogo de vacunas por tipo de animal (para el sub-documento salud.vacunas)
+VACUNAS = {
+    "Perro": ["Antirrábica", "Quíntuple", "Séxtuple", "Tos de las perreras", "Giardia"],
+    "Gato":  ["Antirrábica", "Triple Felina", "Leucemia Felina", "Rinotraqueítis"],
+}
+
+# Tags de comportamiento/características (para el array simple animal.tags)
+TAGS = [
+    "sociable", "energético", "tranquilo", "bueno_con_niños",
+    "bueno_con_otros_animales", "juguetón", "guardián", "cariñoso",
+    "independiente", "entrenado",
+]
  
 TIPOS_VIVIENDA   = ["Casa", "Departamento", "Casa con patio", "Casa de campo"]
 EXPERIENCIAS     = ["Alta", "Media", "Baja"]
@@ -300,11 +321,41 @@ PROVINCIAS = {
 # MONGO — Generadores de documentos
 # ════════════════════════════════════════════════════════════════════════════
  
+def _generar_vacunas(faker, tipo: str, fecha_ingreso) -> list:
+    """
+    Genera entre 0 y 3 vacunas para un animal.
+    - Algunos animales quedan SIN vacunas (array vacío) → demuestra el esquema flexible.
+    - Cada vacuna es un OBJETO {nombre, fecha} → array de documentos embebidos.
+    - La fecha de cada vacuna es POSTERIOR al ingreso del animal (coherencia temporal).
+    """
+    cantidad = random.choices([0, 1, 2, 3], weights=[0.15, 0.35, 0.35, 0.15], k=1)[0]
+    if cantidad == 0:
+        return []
+
+    # Elegimos nombres únicos del catálogo según el tipo (sin repetir vacunas)
+    nombres = random.sample(VACUNAS[tipo], k=min(cantidad, len(VACUNAS[tipo])))
+
+    vacunas = []
+    for nombre in nombres:
+        # Fecha de aplicación entre el ingreso y hoy
+        fecha_vac = faker.date_between(start_date=fecha_ingreso, end_date="today")
+        vacunas.append({
+            "nombre": nombre,
+            # ISODate: datetime real, no string → habilita filtros y orden por fecha
+            "fecha": datetime.combine(fecha_vac, datetime.min.time()),
+        })
+    return vacunas
+
+
 def _generar_animal(faker, indice: int) -> dict:
     """
     Genera un documento de animal con Faker.
-    Los campos y valores replican exactamente el schema del CSV original,
-    con las mismas transformaciones (tipo en español, estado en español, etc.)
+
+    Modelo enriquecido (documental):
+    - Campos planos (animal_id, nombre, tipo, raza, color, sexo, estado, refugio).
+    - Sub-documento `salud` con datos clínicos + array de objetos `vacunas`.
+    - Array simple `tags` para etiquetas de comportamiento.
+    - Fechas como ISODate (datetime real) en vez de string.
     """
     tipo = random.choices(TIPOS_ANIMAL, weights=TIPO_WEIGHTS, k=1)[0]
  
@@ -318,21 +369,39 @@ def _generar_animal(faker, indice: int) -> dict:
         "animal_id"       : f"A{indice:06d}",          # ej: A000001
         "nombre"          : faker.first_name(),
         "tipo"            : tipo,
-        "raza"            : random.choice(RAZAS[tipo]),
-        "color"           : random.choice(COLORES),
-        "fecha_nacimiento": fecha_nac.strftime("%Y-%m-%d"),
-        "fecha_ingreso"   : fecha_ingreso.strftime("%Y-%m-%d"),
-        "sexo"            : random.choice(SEXOS_ANIMAL),
+        "raza"            : random.choice(RAZAS[tipo]),    # ← PLANO (no se toca)
+        "color"           : random.choice(COLORES),        # ← PLANO
+        "sexo"            : random.choice(SEXOS_ANIMAL),   # ← PLANO
+        # ISODate: combinamos date → datetime (Mongo guarda BSON Date, no string)
+        "fecha_nacimiento": datetime.combine(fecha_nac, datetime.min.time()),
+        "fecha_ingreso"   : datetime.combine(fecha_ingreso, datetime.min.time()),
         "estado"          : random.choices(ESTADOS_ANIMAL, weights=ESTADO_WEIGHTS, k=1)[0],
         "refugio"         : random.choice(REFUGIOS),
+
+        # ── SUB-DOCUMENTO: salud (jerarquía + array de objetos embebidos) ──
+        "salud": {
+            "castrado"     : random.choice([True, False]),
+            "desparasitado": random.choice([True, False]),
+            "vacunas"      : _generar_vacunas(faker, tipo, fecha_ingreso),
+        },
+
+        # ── ARRAY SIMPLE: tags de comportamiento (1 a 3, sin repetir) ──
+        "tags": random.sample(TAGS, k=random.randint(1, 3)),
     }
  
  
 def _generar_adoptante(faker, indice: int, animal_ids: list) -> dict:
     """
     Genera un documento de adoptante con Faker.
-    El 40% de los adoptantes tiene un animal_id asignado
-    (simula adopciones realizadas), el resto tiene None.
+
+    Modelo enriquecido (documental):
+    - Datos personales planos (nombre, apellido, edad, sexo, contacto).
+    - Sub-documento `perfil` con los datos de vivienda/ubicación/experiencia
+      (lo que se usa para el matching de adopción).
+    - `animal_id` como REFERENCIA al animal adoptado (no se embebe el animal:
+      es una entidad independiente; el join lo resuelve Python).
+
+    El 40% de los adoptantes tiene un animal_id asignado, el resto None.
     """
     ciudad = random.choice(CIUDADES)
  
@@ -340,24 +409,47 @@ def _generar_adoptante(faker, indice: int, animal_ids: list) -> dict:
     animal_id = random.choice(animal_ids) if random.random() < 0.40 else None
  
     fecha_nac = faker.date_of_birth(minimum_age=18, maximum_age=70)
+
+    # Nombre y apellido primero, para construir un email coherente a partir de ellos
+    nombre   = faker.first_name()
+    apellido = faker.last_name()
+    # El ~12% de los adoptantes NO tiene email (campo opcional → esquema flexible,
+    # y hace que la consulta D4 'eliminar sin email' con $exists tenga sentido real).
+    if random.random() < 0.12:
+        email = None
+    else:
+        dominio = random.choice(["gmail.com", "hotmail.com", "outlook.com", "yahoo.com.ar"])
+        base    = _slug(nombre) + "." + _slug(apellido)
+        email   = f"{base}{random.randint(1, 99)}@{dominio}"
  
-    return {
+    doc = {
         "person_id"           : f"P{indice:05d}",       # ej: P00001
-        "nombre"              : faker.first_name(),
-        "apellido"            : faker.last_name(),
-        "fecha_nacimiento"    : fecha_nac.strftime("%Y-%m-%d"),
+        "nombre"              : nombre,
+        "apellido"            : apellido,
+        # ISODate: datetime real en vez de string
+        "fecha_nacimiento"    : datetime.combine(fecha_nac, datetime.min.time()),
         "edad"                : (
             __import__("datetime").date.today() - fecha_nac
         ).days // 365,
         "sexo"                : random.choice(SEXOS_PERSONA),
-        "ciudad"              : ciudad,
-        "provincia"           : PROVINCIAS[ciudad],
         "telefono"            : faker.phone_number(),
-        "email"               : faker.email(),
-        "tipo_vivienda"       : random.choice(TIPOS_VIVIENDA),
-        "experiencia_mascotas": random.choice(EXPERIENCIAS),
+
+        # ── SUB-DOCUMENTO: perfil de adopción (jerarquía) ──
+        "perfil": {
+            "ciudad"              : ciudad,
+            "provincia"           : PROVINCIAS[ciudad],
+            "tipo_vivienda"       : random.choice(TIPOS_VIVIENDA),
+            "experiencia_mascotas": random.choice(EXPERIENCIAS),
+        },
+
+        # ── REFERENCIA al animal adoptado (None si todavía no adoptó) ──
         "animal_id"           : animal_id,
     }
+    # El campo email solo se agrega si el adoptante tiene uno (esquema flexible).
+    # Los que no lo tienen quedan SIN la clave → la consulta D4 ($exists:false) los encuentra.
+    if email is not None:
+        doc["email"] = email
+    return doc
  
  
 # ════════════════════════════════════════════════════════════════════════════

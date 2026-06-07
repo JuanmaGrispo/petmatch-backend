@@ -1,401 +1,971 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>PetMatch — Neo4j</title>
-    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f0f4f8; color: #222; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MongoDB — PetMatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:      #2ECC71;
+    --green-dark: #25a25a;
+    --green-dim:  #d4f3e0;
+    --green-glow: rgba(46,204,113,0.25);
+    --bg:        #F4F6F8;
+    --surface:   #FFFFFF;
+    --surface2:  #F0F2F5;
+    --border:    #E2E6EA;
+    --text:      #1F2933;
+    --muted:     #8A94A0;
+    --red:       #E63B2E;
+    --amber:     #E08A00;
+    --mono:      'Space Mono', monospace;
+    --sans:      'Syne', sans-serif;
+  }
 
-        header {
-            background: #018BFF;
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-        header a { color: rgba(255,255,255,.75); text-decoration: none; font-size: .9rem; }
-        header a:hover { color: white; }
-        header h1 { font-size: 1.3rem; flex: 1; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .panel { padding: 1.5rem 2rem 3rem; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        .card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.07);
-            overflow: hidden;
-        }
-        .card-header {
-            background: #018BFF;
-            color: white;
-            padding: .6rem 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .card-header h3 { font-size: .9rem; font-family: monospace; }
-        .qnum { font-size: .75rem; opacity: .75; }
-        .card-body { padding: 1rem; }
-        .desc { font-size: .82rem; color: #666; margin-bottom: .75rem; }
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--green);
+    border-bottom: 1px solid var(--green-dark);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 32px; height: 60px;
+  }
+  header a.back { color: rgba(255,255,255,0.85); text-decoration: none; font-family: var(--mono); font-size: 11px; letter-spacing: 1px; }
+  header a.back:hover { color: white; }
+  .logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: white; box-shadow: 0 0 12px rgba(255,255,255,0.7);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  header h1 {
+    font-family: var(--mono); font-size: 14px; letter-spacing: 2px;
+    text-transform: uppercase; color: white;
+  }
+  header h1 span { color: rgba(255,255,255,0.85); }
+  .header-badge {
+    margin-left: auto; font-family: var(--mono); font-size: 11px;
+    color: rgba(255,255,255,0.9); letter-spacing: 1px;
+  }
+  .status-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: white; margin-right: 6px; box-shadow: 0 0 8px rgba(255,255,255,0.8);
+  }
 
-        .form-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; }
-        select {
-            flex: 1;
-            min-width: 0;
-            padding: .4rem .6rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: .82rem;
-            font-family: monospace;
-            background: white;
-            cursor: pointer;
-        }
-        select:focus { outline: none; border-color: #018BFF; }
-        select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; }
+  /* ── NAV TABS ── */
+  nav {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border);
+    padding: 0 32px; background: var(--surface);
+    overflow-x: auto;
+  }
+  .tab {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted);
+    padding: 14px 24px; cursor: pointer; border: none;
+    border-bottom: 2px solid transparent; background: none;
+    transition: all .2s; white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+  .tab .tab-icon { margin-right: 8px; font-style: normal; }
 
-        button.run {
-            padding: .4rem .9rem;
-            background: #018BFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: .82rem;
-            white-space: nowrap;
-        }
-        button.run:hover { background: #0070d4; }
+  /* ── MAIN LAYOUT ── */
+  main {
+    display: grid; grid-template-columns: 1fr 420px; gap: 0;
+    min-height: calc(100vh - 113px); position: relative; z-index: 1;
+  }
 
-        .result { margin-top: .75rem; font-size: .8rem; }
-        .result-count { color: #888; margin-bottom: .4rem; }
-        .result table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: monospace;
-            font-size: .75rem;
-        }
-        .result th {
-            background: #e8f2ff;
-            color: #018BFF;
-            text-align: left;
-            padding: .3rem .5rem;
-            border-bottom: 2px solid #b3d4ff;
-        }
-        .result td {
-            padding: .28rem .5rem;
-            border-bottom: 1px solid #eee;
-            word-break: break-all;
-        }
-        .result tr:last-child td { border-bottom: none; }
-        .result tr:hover td { background: #f0f8ff; }
-        .empty { color: #aaa; font-style: italic; }
-        .error { color: #c62828; font-size: .8rem; }
-        .loading { color: #888; font-size: .8rem; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .work-area { padding: 32px; border-right: 1px solid var(--border); }
 
-        .legend {
-            display: flex;
-            gap: 1rem;
-            margin-top: .6rem;
-            flex-wrap: wrap;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: .75rem;
-            color: #666;
-        }
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-    </style>
+  .panel-title {
+    font-size: 11px; font-family: var(--mono); color: var(--muted);
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 28px; display: flex; align-items: center; gap: 10px;
+  }
+  .panel-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 24px; margin-bottom: 16px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: #444; }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; letter-spacing: .5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .badge {
+    font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 3px;
+    background: var(--surface2); color: var(--muted); letter-spacing: 1px;
+    text-transform: uppercase; border: 1px solid var(--border);
+  }
+  .badge.star { color: var(--amber); border-color: var(--amber); }
+
+  /* ── FORM ELEMENTS ── */
+  .field-row {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px; margin-bottom: 16px;
+  }
+  .field-row.single { grid-template-columns: 1fr; }
+  .field-row.two    { grid-template-columns: 1fr 1fr; }
+  .field { display: flex; flex-direction: column; gap: 5px; position: relative; }
+  .field label {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .field input, .field select, .field textarea {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); font-family: var(--mono); font-size: 12px;
+    padding: 9px 11px; outline: none; transition: border-color .15s; width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--green); }
+  .field input::placeholder, .field textarea::placeholder { color: #B8C0C8; font-style: italic; }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .field select option { background: #FFFFFF; color: var(--text); }
+
+  /* ── TYPEAHEAD DROPDOWN ── */
+  .typeahead-results {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 0 0 5px 5px; max-height: 200px; overflow-y: auto;
+    display: none;
+  }
+  .typeahead-results.show { display: block; }
+  .typeahead-item {
+    padding: 8px 11px; font-family: var(--mono); font-size: 11px;
+    cursor: pointer; border-bottom: 1px solid var(--border); color: var(--text);
+  }
+  .typeahead-item:last-child { border-bottom: none; }
+  .typeahead-item:hover { background: var(--bg); color: var(--green); }
+  .typeahead-item .ta-id { color: var(--muted); font-size: 10px; }
+
+  /* ── BUTTONS ── */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .5px;
+    padding: 8px 16px; border-radius: 5px; border: 1px solid var(--border);
+    cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--green); border-color: var(--green); color: white; font-weight: 700; }
+  .btn-primary:hover { background: var(--green-dark); box-shadow: 0 0 16px var(--green-glow); }
+  .btn-ghost { background: transparent; color: var(--text); }
+  .btn-ghost:hover { background: var(--surface2); border-color: #444; }
+  .btn-danger { background: transparent; border-color: #f0c4c0; color: var(--red); }
+  .btn-danger:hover { background: rgba(230,59,46,.08); border-color: var(--red); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* ── RIGHT PANEL — RESULT ── */
+  .result-pane {
+    display: flex; flex-direction: column; position: sticky; top: 113px;
+    height: calc(100vh - 113px); overflow: hidden;
+  }
+  .result-header {
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .result-header span.lbl {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  #result-status { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 3px; }
+  #result-status.ok      { background: rgba(46,204,113,.15); color: var(--green); border: 1px solid rgba(46,204,113,.3); }
+  #result-status.error   { background: rgba(230,59,46,.15);  color: var(--red);   border: 1px solid rgba(230,59,46,.3); }
+  #result-status.waiting { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .result-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+  /* ── QUERY DISPLAY (clave para la defensa) ── */
+  .query-box {
+    background: #1F2933; border: 1px solid var(--green-dark); border-radius: 6px;
+    padding: 12px 14px; margin-bottom: 16px;
+  }
+  .query-box .q-label {
+    font-family: var(--mono); font-size: 9px; color: var(--green);
+    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;
+  }
+  .query-box pre {
+    font-family: var(--mono); font-size: 11px; color: #E8EDF2;
+    white-space: pre-wrap; word-break: break-word; line-height: 1.5;
+  }
+
+  .result-count { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+
+  /* ── JSON / TABLE OUTPUT ── */
+  pre.json {
+    font-family: var(--mono); font-size: 11px; line-height: 1.6;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .json-key { color: var(--green-dark); }
+  .json-str { color: #C2410C; }
+  .json-num { color: #1D4ED8; }
+  .json-bool { color: #B45309; }
+
+  .doc-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px 14px; margin-bottom: 10px;
+  }
+
+  .result-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 12px; color: var(--muted); font-family: var(--mono);
+    font-size: 12px; text-align: center;
+  }
+  .result-empty .icon { font-size: 36px; opacity: .3; }
+
+  /* ── DYNAMIC FIELDS (insertar con campos variables) ── */
+  .dyn-row {
+    display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end;
+  }
+  .dyn-row .field { flex: 1; }
+  .dyn-remove {
+    background: transparent; border: 1px solid #f0c4c0; color: var(--red);
+    border-radius: 5px; cursor: pointer; padding: 9px 13px; font-family: var(--mono);
+    height: 36px;
+  }
+  .dyn-remove:hover { border-color: var(--red); background: rgba(230,59,46,.08); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: #1F2933; border: 1px solid #2A3340; color: #F0F2F5;
+    padding: 12px 20px; border-radius: 6px; font-family: var(--mono); font-size: 12px;
+    z-index: 200; transition: transform .3s; opacity: 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.ok    { border-color: rgba(46,204,113,.6); }
+  #toast.error { border-color: rgba(230,59,46,.6); }
+
+  .seed-ok { font-family: var(--mono); font-size: 12px; color: var(--green); margin-top: 12px; }
+</style>
 </head>
 <body>
 
 <header>
-    <a href="/">← Inicio</a>
-    <h1>Neo4j — PetMatch</h1>
+  <a href="/" class="back">← Inicio</a>
+  <div class="logo-dot"></div>
+  <h1>PetMatch — <span>MongoDB</span></h1>
+  <span class="header-badge"><span class="status-dot"></span>Atlas · petmatch</span>
 </header>
 
-<div class="panel">
-<div class="grid">
+<nav>
+  <button class="tab active" onclick="switchTab('datos')" id="tab-datos"><i class="tab-icon">🗂️</i>Datos &amp; Modelo</button>
+  <button class="tab" onclick="switchTab('consultas')" id="tab-consultas"><i class="tab-icon">🔍</i>Consultas</button>
+  <button class="tab" onclick="switchTab('crud')" id="tab-crud"><i class="tab-icon">✏️</i>CRUD</button>
+  <button class="tab" onclick="switchTab('updates')" id="tab-updates"><i class="tab-icon">🔄</i>Updates</button>
+  <button class="tab" onclick="switchTab('deletes')" id="tab-deletes"><i class="tab-icon">🗑️</i>Deletes</button>
+</nav>
 
-    <!-- Q1: Recomendaciones para una persona -->
-    <div class="card">
-        <div class="card-header"><h3>recomendar_animales</h3><span class="qnum">Q1</span></div>
-        <div class="card-body">
-            <p class="desc">Animales disponibles compatibles con una persona (hasta 5).</p>
-            <form onsubmit="query(event, 'q1')">
-                <div class="form-row">
-                    <select name="person_id" id="sel-persona-q1" required>
-                        <option value="">Cargando personas…</option>
-                    </select>
-                    <button class="run" type="submit">Ejecutar</button>
-                </div>
-            </form>
-            <div class="result" id="r-q1"></div>
+<main>
+  <div id="content-area">
+
+    <!-- ══════════════════════════════ DATOS & MODELO -->
+    <div class="panel active" id="panel-datos">
+      <div class="work-area">
+        <p class="panel-title">Datos &amp; Modelo · seed · export · estructura</p>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Sembrar base de datos <span class="badge">insert_many</span></span></div>
+          <p class="card-desc">Genera 1000 animales y 1000 adoptantes con Faker (modelo enriquecido: sub-documentos, arrays de objetos, ISODate). Escribí la frase de confirmación para borrar y resembrar.</p>
+          <div class="field-row single">
+            <div class="field"><label>Confirmación</label><input id="seed_confirm" placeholder="Escribí: BORRAR Y SEMBRAR"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="sembrar()">⚠ Borrar y sembrar</button></div>
+          <div id="seed_msg"></div>
         </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Exportar CSV <span class="badge">pandas</span></span></div>
+          <p class="card-desc">Exporta los animales disponibles a un archivo .csv usando pandas. Requisito de la cátedra.</p>
+          <div class="btn-row"><a class="btn btn-primary" href="/mongo/exportar">⬇ Descargar animales_disponibles.csv</a></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Estructura del documento <span class="badge">schema</span></span></div>
+          <p class="card-desc">Modelo documental enriquecido. La jerarquía (sub-documentos), los arrays de objetos y los campos opcionales son lo que distingue a MongoDB de una tabla relacional.</p>
+          <pre class="json" style="background:#050505;border:1px solid var(--border);border-radius:6px;padding:14px;">{
+  <span class="json-key">"animal_id"</span>: <span class="json-str">"A000001"</span>,
+  <span class="json-key">"nombre"</span>: <span class="json-str">"Bautista"</span>,
+  <span class="json-key">"tipo"</span>: <span class="json-str">"Perro"</span>,
+  <span class="json-key">"raza"</span>: <span class="json-str">"Labrador"</span>,
+  <span class="json-key">"fecha_ingreso"</span>: <span class="json-str">ISODate(...)</span>,
+  <span class="json-key">"salud"</span>: {                  <span style="color:var(--muted)">// ← sub-documento</span>
+    <span class="json-key">"castrado"</span>: <span class="json-bool">true</span>,
+    <span class="json-key">"vacunas"</span>: [             <span style="color:var(--muted)">// ← array de objetos</span>
+      { <span class="json-key">"nombre"</span>: <span class="json-str">"Antirrábica"</span>, <span class="json-key">"fecha"</span>: <span class="json-str">ISODate(...)</span> }
+    ]
+  },
+  <span class="json-key">"tags"</span>: [<span class="json-str">"sociable"</span>, <span class="json-str">"energético"</span>]
+}</pre>
+        </div>
+      </div>
     </div>
 
-    <!-- Q2: Animales de un refugio -->
-    <div class="card">
-        <div class="card-header"><h3>animales_por_refugio</h3><span class="qnum">Q2</span></div>
-        <div class="card-body">
-            <p class="desc">Todos los animales que pertenecen a un refugio (hasta 25).</p>
-            <form onsubmit="query(event, 'q2')">
-                <div class="form-row">
-                    <select name="nombre" id="sel-refugio-q2" required>
-                        <option value="">Cargando refugios…</option>
-                    </select>
-                    <button class="run" type="submit">Ejecutar</button>
-                </div>
-            </form>
-            <div class="result" id="r-q2"></div>
-        </div>
-    </div>
+    <!-- ══════════════════════════════ CONSULTAS -->
+    <div class="panel" id="panel-consultas">
+      <div class="work-area">
+        <p class="panel-title">Consultas avanzadas · find · aggregate · $elemMatch</p>
 
-    <!-- Q3: Historial de adopciones -->
-    <div class="card">
-        <div class="card-header"><h3>historial_adopciones</h3><span class="qnum">Q3</span></div>
-        <div class="card-body">
-            <p class="desc">Animales adoptados por una persona.</p>
-            <form onsubmit="query(event, 'q3')">
-                <div class="form-row">
-                    <select name="person_id" id="sel-persona-q3" required>
-                        <option value="">Cargando personas…</option>
-                    </select>
-                    <button class="run" type="submit">Ejecutar</button>
-                </div>
-            </form>
-            <div class="result" id="r-q3"></div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">C1 · Catálogo de adopción <span class="badge">índice compuesto</span></span></div>
+          <p class="card-desc">Animales disponibles filtrados por tipo y refugio. Usa el índice compuesto idx_tipo_estado_refugio.</p>
+          <div class="field-row two">
+            <div class="field"><label>Tipo</label><select id="c1_tipo"></select></div>
+            <div class="field"><label>Refugio</label><select id="c1_refugio"></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="c1()">Ejecutar C1</button></div>
         </div>
-    </div>
 
-    <!-- Q4: Animales disponibles por tipo -->
-    <div class="card">
-        <div class="card-header"><h3>animales_disponibles_por_tipo</h3><span class="qnum">Q4</span></div>
-        <div class="card-body">
-            <p class="desc">Cantidad de animales disponibles agrupados por tipo.</p>
-            <form onsubmit="query(event, 'q4')">
-                <div class="form-row">
-                    <button class="run" type="submit" style="width:100%">Ejecutar</button>
-                </div>
-            </form>
-            <div class="result" id="r-q4"></div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">C2 · Matching de perfil <span class="badge">sub-documento</span></span></div>
+          <p class="card-desc">Adoptantes que coinciden con ciudad + tipo de vivienda + experiencia. Filtra sobre el sub-documento perfil.*</p>
+          <div class="field-row">
+            <div class="field"><label>Ciudad</label><select id="c2_ciudad"></select></div>
+            <div class="field"><label>Vivienda</label><select id="c2_vivienda"></select></div>
+            <div class="field"><label>Experiencia</label><select id="c2_experiencia"></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="c2()">Ejecutar C2</button></div>
         </div>
-    </div>
 
-    <!-- Q5: Personas compatibles con un animal -->
-    <div class="card">
-        <div class="card-header"><h3>personas_compatibles</h3><span class="qnum">Q5</span></div>
-        <div class="card-body">
-            <p class="desc">Personas compatibles con un animal específico (hasta 5).</p>
-            <form onsubmit="query(event, 'q5')">
-                <div class="form-row">
-                    <select name="animal_id" id="sel-animal-q5" required>
-                        <option value="">Cargando animales…</option>
-                    </select>
-                    <button class="run" type="submit">Ejecutar</button>
-                </div>
-            </form>
-            <div class="result" id="r-q5"></div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">C3 · Reporte gerencial <span class="badge">aggregate</span></span></div>
+          <p class="card-desc">Agregación $group → $project → $sort. Cuenta animales por estado, tipo y refugio.</p>
+          <div class="btn-row"><button class="btn btn-primary" onclick="c3()">Ejecutar agregación</button></div>
         </div>
-    </div>
 
-    <!-- Q6: Grafo de compatibilidad -->
-    <div class="card">
-        <div class="card-header"><h3>grafo_compatibilidad</h3><span class="qnum">Q6</span></div>
-        <div class="card-body">
-            <p class="desc">Red visual de compatibilidad de una persona con sus animales.</p>
-            <div class="form-row">
-                <select id="sel-persona-q6">
-                    <option value="">Elegí una persona</option>
-                </select>
-                <button class="run" onclick="ejecutarGrafo()">Ejecutar</button>
+        <div class="card">
+          <div class="card-header"><span class="card-title">C4 · Buscador inteligente <span class="badge">$regex · $or</span></span></div>
+          <p class="card-desc">Búsqueda de texto libre sobre nombre o raza (coincidencia parcial, sin distinguir mayúsculas). La barra de búsqueda real del sistema.</p>
+          <div class="field-row single">
+            <div class="field"><label>Texto</label><input id="c4_texto" placeholder="ej: Labrador, Luna, Beag..."></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="c4()">Buscar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">C5 · Adoptantes con su animal <span class="badge">join Python</span></span></div>
+          <p class="card-desc">Adoptantes con animal_id asignado, enriquecidos con datos del animal. Join orquestado desde Python (las colecciones no se conectan entre sí).</p>
+          <div class="btn-row"><button class="btn btn-primary" onclick="c5()">Ejecutar C5</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">C6 · Animales por vacuna <span class="badge star">★ $elemMatch</span></span></div>
+          <p class="card-desc">Animales que tienen aplicada una vacuna específica dentro del array salud.vacunas. En SQL requeriría una tabla aparte y un JOIN; acá la vacuna vive embebida en el animal.</p>
+          <div class="field-row single">
+            <div class="field"><label>Vacuna</label>
+              <select id="c6_vacuna">
+                <option value="Antirrábica">Antirrábica</option>
+                <option value="Quíntuple">Quíntuple</option>
+                <option value="Séxtuple">Séxtuple</option>
+                <option value="Triple Felina">Triple Felina</option>
+                <option value="Leucemia Felina">Leucemia Felina</option>
+                <option value="Rinotraqueítis">Rinotraqueítis</option>
+                <option value="Tos de las perreras">Tos de las perreras</option>
+                <option value="Giardia">Giardia</option>
+              </select>
             </div>
-            <div id="grafo-container" style="height:300px; border:1px solid #eee; border-radius:6px; margin-top:.75rem; background:#fafafa;"></div>
-            <div class="legend">
-                <div class="legend-item"><div class="legend-dot" style="background:#018BFF;"></div> Persona</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#F97316;"></div> Perro</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#8B5CF6;"></div> Gato</div>
-            </div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="c6()">Ejecutar C6</button></div>
         </div>
+      </div>
     </div>
 
-</div>
-</div>
+    <!-- ══════════════════════════════ CRUD -->
+    <div class="panel" id="panel-crud">
+      <div class="work-area">
+        <p class="panel-title">CRUD · buscar · insertar · eliminar documento</p>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Buscar animal <span class="badge">find_one</span></span></div>
+          <p class="card-desc">Buscá cualquiera de los 1000 animales escribiendo su nombre o ID (búsqueda en vivo, sin límite de 30).</p>
+          <div class="field-row single">
+            <div class="field"><label>Animal</label>
+              <input id="crud_animal_search" placeholder="escribí nombre o ID..." oninput="typeahead('animales', this, 'crud_animal_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-crud_animal_search"></div>
+              <input type="hidden" id="crud_animal_id">
+            </div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="buscarAnimal()">Buscar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Insertar animal <span class="badge">insert_one</span></span></div>
+          <p class="card-desc">Insertá un animal nuevo. Podés agregar campos extra dinámicamente (esquema flexible: no todos los documentos necesitan los mismos campos).</p>
+          <div class="field-row two">
+            <div class="field"><label>animal_id</label><input id="ins_animal_id" placeholder="A001234"></div>
+            <div class="field"><label>nombre</label><input id="ins_nombre" placeholder="Toby"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>tipo</label><select id="ins_tipo"><option>Perro</option><option>Gato</option></select></div>
+            <div class="field"><label>estado</label><select id="ins_estado"><option>Disponible</option><option>Adoptado</option><option>En tránsito</option><option>Devuelto</option></select></div>
+            <div class="field"><label>refugio</label><input id="ins_refugio" placeholder="Huellitas"></div>
+          </div>
+          <div id="ins_extra"></div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="addCampo()">+ Agregar campo</button>
+            <button class="btn btn-primary" onclick="insertarAnimal()">Insertar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Eliminar animal <span class="badge">delete_one</span></span></div>
+          <p class="card-desc">Eliminá un animal puntual buscándolo por nombre o ID.</p>
+          <div class="field-row single">
+            <div class="field"><label>Animal</label>
+              <input id="del_animal_search" placeholder="escribí nombre o ID..." oninput="typeahead('animales', this, 'del_animal_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-del_animal_search"></div>
+              <input type="hidden" id="del_animal_id">
+            </div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="eliminarAnimal()">Eliminar</button></div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Buscar adoptante <span class="badge">find_one</span></span></div>
+          <p class="card-desc">Buscá cualquiera de los 1000 adoptantes por nombre, apellido o ID.</p>
+          <div class="field-row single">
+            <div class="field"><label>Adoptante</label>
+              <input id="crud_adopt_search" placeholder="escribí nombre o ID..." oninput="typeahead('adoptantes', this, 'crud_adopt_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-crud_adopt_search"></div>
+              <input type="hidden" id="crud_adopt_id">
+            </div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="buscarAdoptante()">Buscar</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════ UPDATES -->
+    <div class="panel" id="panel-updates">
+      <div class="work-area">
+        <p class="panel-title">Operadores de actualización · 7 operadores únicos</p>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">U1 · Cambiar estado <span class="badge">$set</span></span></div>
+          <p class="card-desc">Cambia el estado de un animal con $set.</p>
+          <div class="field-row two">
+            <div class="field"><label>Animal</label>
+              <input id="u1_search" placeholder="nombre o ID..." oninput="typeahead('animales', this, 'u1_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-u1_search"></div><input type="hidden" id="u1_id">
+            </div>
+            <div class="field"><label>Nuevo estado</label><select id="u1_estado"><option>Disponible</option><option>Adoptado</option><option>En tránsito</option><option>Devuelto</option></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="u1()">Actualizar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">U2 · Actualizar perfil <span class="badge">$set anidado</span></span></div>
+          <p class="card-desc">Actualiza ciudad + vivienda + experiencia dentro del sub-documento perfil en un solo $set.</p>
+          <div class="field-row single">
+            <div class="field"><label>Adoptante</label>
+              <input id="u2_search" placeholder="nombre o ID..." oninput="typeahead('adoptantes', this, 'u2_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-u2_search"></div><input type="hidden" id="u2_id">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Ciudad</label><input id="u2_ciudad" placeholder="Córdoba"></div>
+            <div class="field"><label>Vivienda</label><input id="u2_vivienda" placeholder="Casa"></div>
+            <div class="field"><label>Experiencia</label><input id="u2_exp" placeholder="Alta"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="u2()">Actualizar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">U3 · Destacar en catálogo <span class="badge">$inc</span></span></div>
+          <p class="card-desc">Incrementa el contador 'veces_destacado' del animal con $inc. Si el campo no existe, lo crea (esquema flexible). Es un contador interno del documento, distinto del ranking de Redis.</p>
+          <div class="field-row single">
+            <div class="field"><label>Animal</label>
+              <input id="u3_search" placeholder="nombre o ID..." oninput="typeahead('animales', this, 'u3_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-u3_search"></div><input type="hidden" id="u3_id">
+            </div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="u3()">+1 destacado</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">U4 · Agregar vacuna <span class="badge">$push</span></span></div>
+          <p class="card-desc">Agrega una vacuna al array salud.vacunas con $push.</p>
+          <div class="field-row two">
+            <div class="field"><label>Animal</label>
+              <input id="u4_search" placeholder="nombre o ID..." oninput="typeahead('animales', this, 'u4_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-u4_search"></div><input type="hidden" id="u4_id">
+            </div>
+            <div class="field"><label>Vacuna</label><input id="u4_vacuna" placeholder="Antirrábica"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="u4()">Agregar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">U5 · Quitar campo <span class="badge">$unset</span></span></div>
+          <p class="card-desc">Elimina completamente un campo del documento con $unset.</p>
+          <div class="field-row two">
+            <div class="field"><label>Adoptante</label>
+              <input id="u5_search" placeholder="nombre o ID..." oninput="typeahead('adoptantes', this, 'u5_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-u5_search"></div><input type="hidden" id="u5_id">
+            </div>
+            <div class="field"><label>Campo</label><select id="u5_campo"><option>telefono</option><option>email</option></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="u5()">Quitar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">U6 · Agregar tag <span class="badge">$addToSet</span></span></div>
+          <p class="card-desc">Agrega un tag al array sin duplicar con $addToSet.</p>
+          <div class="field-row two">
+            <div class="field"><label>Animal</label>
+              <input id="u6_search" placeholder="nombre o ID..." oninput="typeahead('animales', this, 'u6_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-u6_search"></div><input type="hidden" id="u6_id">
+            </div>
+            <div class="field"><label>Tag</label><input id="u6_tag" placeholder="sociable"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="u6()">Agregar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">U7 · Actualización masiva <span class="badge">update_many</span></span></div>
+          <p class="card-desc">Cambia el estado de TODOS los animales de un refugio con update_many.</p>
+          <div class="field-row two">
+            <div class="field"><label>Refugio</label><select id="u7_refugio"></select></div>
+            <div class="field"><label>Nuevo estado</label><select id="u7_estado"><option>Disponible</option><option>Adoptado</option><option>En tránsito</option><option>Devuelto</option></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="u7()">Ejecutar masivo</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════ DELETES -->
+    <div class="panel" id="panel-deletes">
+      <div class="work-area">
+        <p class="panel-title">Operaciones de eliminación · 7 operaciones</p>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">D1 · Eliminar animal <span class="badge">delete_one</span></span></div>
+          <p class="card-desc">Elimina un animal por su animal_id.</p>
+          <div class="field-row single">
+            <div class="field"><label>Animal</label>
+              <input id="d1_search" placeholder="nombre o ID..." oninput="typeahead('animales', this, 'd1_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-d1_search"></div><input type="hidden" id="d1_id">
+            </div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="d1()">Eliminar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">D2 · Eliminar adoptante <span class="badge">delete_one</span></span></div>
+          <p class="card-desc">Elimina un adoptante por su person_id.</p>
+          <div class="field-row single">
+            <div class="field"><label>Adoptante</label>
+              <input id="d2_search" placeholder="nombre o ID..." oninput="typeahead('adoptantes', this, 'd2_id')" autocomplete="off">
+              <div class="typeahead-results" id="ta-d2_search"></div><input type="hidden" id="d2_id">
+            </div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="d2()">Eliminar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">D3 · Eliminar por estado <span class="badge">delete_many</span></span></div>
+          <p class="card-desc">Elimina todos los animales con un estado determinado.</p>
+          <div class="field-row single">
+            <div class="field"><label>Estado</label><select id="d3_estado"><option>Disponible</option><option>Adoptado</option><option>En tránsito</option><option>Devuelto</option></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="d3()">Eliminar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">D4 · Eliminar sin email <span class="badge">$exists · $or</span></span></div>
+          <p class="card-desc">Elimina adoptantes sin campo email usando $exists + $or.</p>
+          <div class="btn-row"><button class="btn btn-danger" onclick="d4()">Ejecutar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">D5 · Eliminar anteriores a fecha <span class="badge">$lt · ISODate</span></span></div>
+          <p class="card-desc">Elimina animales ingresados antes de la fecha indicada con $lt (comparación de fecha real, no string).</p>
+          <div class="field-row single">
+            <div class="field"><label>Fecha límite</label><input id="d5_fecha" type="date" value="2020-01-01"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="d5()">Eliminar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">D6 · Eliminar por refugio y estado <span class="badge">AND compuesto</span></span></div>
+          <p class="card-desc">Elimina animales con filtro compuesto refugio + estado.</p>
+          <div class="field-row two">
+            <div class="field"><label>Refugio</label><select id="d6_refugio"></select></div>
+            <div class="field"><label>Estado</label><select id="d6_estado"><option>Disponible</option><option>Adoptado</option><option>En tránsito</option><option>Devuelto</option></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="d6()">Eliminar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">D7 · Eliminar por lista de IDs <span class="badge">$in</span></span></div>
+          <p class="card-desc">Elimina todos los animales de una lista de IDs separados por coma con $in.</p>
+          <div class="field-row single">
+            <div class="field"><label>IDs (separados por coma)</label><input id="d7_ids" placeholder="A000001, A000002, A000003"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-danger" onclick="d7()">Eliminar</button></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════ RESULT PANE -->
+  <div class="result-pane">
+    <div class="result-header">
+      <span class="lbl">resultado</span>
+      <span id="result-status" class="waiting">—</span>
+    </div>
+    <div class="result-body" id="result-body">
+      <div class="result-empty">
+        <div class="icon">🍃</div>
+        <div>Ejecutá una operación<br>para ver el resultado y el query</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
 
 <script>
-// ── Poblar selects ────────────────────────────────────────────────────────────
-async function loadSelects() {
+// ════════════════════════════════════════════════════
+// TAB ROUTING
+// ════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════
+function v(id){ return document.getElementById(id)?.value?.trim() || ''; }
+
+function setStatus(ok){
+  const el = document.getElementById('result-status');
+  el.className = ok ? 'ok' : 'error';
+  el.textContent = ok ? 'OK' : 'ERROR';
+}
+
+function toast(msg, ok=true){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = (ok ? 'ok' : 'error') + ' show';
+  setTimeout(() => t.className = t.className.replace('show','').trim(), 2600);
+}
+
+function syntaxHighlight(obj){
+  let json = JSON.stringify(obj, null, 2);
+  json = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    m => {
+      let cls = 'json-num';
+      if (/^"/.test(m)) cls = /:$/.test(m) ? 'json-key' : 'json-str';
+      else if (/true|false/.test(m)) cls = 'json-bool';
+      return '<span class="' + cls + '">' + m + '</span>';
+    });
+}
+
+// Muestra el query Mongo + los resultados en el panel derecho
+function showResult(data, queryStr){
+  const body = document.getElementById('result-body');
+  const n = Array.isArray(data) ? data.length : (data ? 1 : 0);
+  let html = '';
+  if (queryStr){
+    html += '<div class="query-box"><div class="q-label">query ejecutado</div><pre>' + queryStr + '</pre></div>';
+  }
+  if (Array.isArray(data)){
+    html += '<div class="result-count">' + n + ' documento' + (n!==1?'s':'') + '</div>';
+    if (n === 0) html += '<div style="color:var(--muted);font-family:var(--mono);font-size:12px">Sin resultados</div>';
+    else data.forEach(d => html += '<div class="doc-card"><pre class="json">' + syntaxHighlight(d) + '</pre></div>');
+  } else {
+    html += '<pre class="json">' + syntaxHighlight(data) + '</pre>';
+  }
+  body.innerHTML = html;
+}
+
+async function api(method, url, body, queryStr){
+  const opts = { method, headers: {} };
+  if (body){ opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  try {
+    const r = await fetch(url, opts);
+    const data = await r.json();
+    const hayError = !r.ok || data.error;
+    // Operación que salió bien pero no afectó ningún documento (ID inexistente)
+    const noEncontrado = !hayError && (data.deleted === 0 || data.modified === 0);
+    setStatus(!hayError);
+    showResult(data, queryStr);
+    if (hayError)          toast(data.error || 'Error en la operación', false);
+    else if (noEncontrado) toast('⚠ No se encontró ningún documento que coincida', false);
+    else                   toast('✓ Operación exitosa');
+    return data;
+  } catch(e){
+    setStatus(false);
+    showResult({ error: e.message }, queryStr);
+    toast('Error de conexión', false);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// TYPEAHEAD (búsqueda dinámica, reemplaza limit 30)
+// ════════════════════════════════════════════════════
+let taTimer = null;
+function typeahead(coleccion, inputEl, hiddenId){
+  const box = document.getElementById('ta-' + inputEl.id);
+  const q = inputEl.value.trim();
+  // al escribir, invalidamos el id previamente elegido (lo recalculará el botón)
+  document.getElementById(hiddenId).value = '';
+  clearTimeout(taTimer);
+  if (q.length < 1){ box.classList.remove('show'); box.innerHTML = ''; return; }
+  taTimer = setTimeout(async () => {
     try {
-        const [personas, refugios, animales, adoptantes] = await Promise.all([
-            fetch('/api/personas').then(r => r.json()),
-            fetch('/api/refugios').then(r => r.json()),
-            fetch('/api/animales').then(r => r.json()),
-            fetch('/api/personas/adoptantes').then(r => r.json()),
-        ]);
+      const r = await fetch('/mongo/buscar/' + coleccion + '?q=' + encodeURIComponent(q));
+      let items = [];
+      try { items = await r.json(); } catch(_) { items = []; }
+      if (!Array.isArray(items) || !items.length){
+        box.innerHTML = '<div class="typeahead-item">sin coincidencias</div>'; box.classList.add('show'); return;
+      }
+      box.innerHTML = items.map(it => {
+        const id = it.animal_id || it.person_id;
+        const label = (it.nombre || '') + (it.apellido ? ' ' + it.apellido : '') + (it.tipo ? ' (' + it.tipo + ')' : '');
+        return '<div class="typeahead-item" onclick="pickTA(\'' + inputEl.id + '\',\'' + hiddenId + '\',\'' + id + '\',\'' + label.replace(/'/g,"") + '\')">' +
+               label + ' <span class="ta-id">— ' + id + '</span></div>';
+      }).join('');
+      box.classList.add('show');
+    } catch(e){ box.innerHTML = '<div class="typeahead-item">error de conexión</div>'; box.classList.add('show'); }
+  }, 200);
+}
+function pickTA(inputId, hiddenId, id, label){
+  document.getElementById(inputId).value = label + ' — ' + id;
+  document.getElementById(hiddenId).value = id;
+  document.getElementById('ta-' + inputId).classList.remove('show');
+}
+// cerrar typeahead al clickear afuera
+document.addEventListener('click', e => {
+  if (!e.target.closest('.field')) document.querySelectorAll('.typeahead-results').forEach(b => b.classList.remove('show'));
+});
 
-        // Personas → Q1 y Q6
-        const personaOpts = `<option value="">Elegí una persona</option>` +
-            personas.map(p => `<option value="${p.id}">${p.nombre} — ${p.id}</option>`).join('');
-        document.getElementById('sel-persona-q1').innerHTML = personaOpts;
-        document.getElementById('sel-persona-q6').innerHTML = personaOpts;
+// Resuelve el ID a usar: prioriza el elegido de la lista; si no, usa lo escrito
+// (sirve cuando el usuario escribe el ID/nombre exacto y aprieta el botón sin clickear).
+// Devuelve el id o '' si no se puede resolver.
+async function resolverId(coleccion, searchInputId, hiddenId){
+  // 1) si ya eligió de la lista, usamos eso
+  const elegido = document.getElementById(hiddenId).value.trim();
+  if (elegido) return elegido;
 
-        // Adoptantes → Q3 (solo los que adoptaron)
-        document.getElementById('sel-persona-q3').innerHTML =
-            `<option value="">Elegí una persona</option>` +
-            adoptantes.map(p => `<option value="${p.id}">${p.nombre} — ${p.id}</option>`).join('');
+  // 2) tomamos lo escrito y lo limpiamos (comillas, espacios)
+  let texto = document.getElementById(searchInputId).value.trim();
+  texto = texto.replace(/["']/g, '').trim();   // saca comillas que pudo dejar la lista
+  if (!texto) return '';
+  // si quedó con formato "Nombre — ID", extraemos el ID del final
+  if (texto.includes('—')) texto = texto.split('—').pop().trim();
 
-        // Refugios → Q2
-        document.getElementById('sel-refugio-q2').innerHTML =
-            `<option value="">Elegí un refugio</option>` +
-            refugios.map(r => `<option value="${r.nombre}">${r.nombre}</option>`).join('');
+  // 3) si parece un ID exacto (A###### o P#####), lo usamos directo
+  if (/^[AP]\d+$/i.test(texto)) return texto.toUpperCase();
 
-        // Animales → Q5
-        document.getElementById('sel-animal-q5').innerHTML =
-            `<option value="">Elegí un animal</option>` +
-            animales.map(a => `<option value="${a.id}">${a.nombre} (${a.tipo}) — ${a.id}</option>`).join('');
-
-    } catch (e) {
-        console.error('Error cargando opciones:', e);
-        document.querySelectorAll('select').forEach(s => {
-            s.innerHTML = '<option value="">Error al cargar</option>';
-        });
+  // 4) si es un nombre, buscamos en el backend y tomamos la primera coincidencia
+  try {
+    const r = await fetch('/mongo/buscar/' + coleccion + '?q=' + encodeURIComponent(texto));
+    const items = await r.json();
+    if (Array.isArray(items) && items.length){
+      const it = items[0];
+      return it.animal_id || it.person_id || '';
     }
+  } catch(e){}
+  return '';
 }
 
-// ── Render tabla ──────────────────────────────────────────────────────────────
-function renderTable(data) {
-    if (!Array.isArray(data) || data.length === 0)
-        return '<span class="empty">Sin resultados</span>';
 
-    const keys = Object.keys(data[0]);
-    const ths = keys.map(k => `<th>${k}</th>`).join('');
-    const trs = data.map(row =>
-        '<tr>' + keys.map(k => `<td>${row[k] ?? ''}</td>`).join('') + '</tr>'
-    ).join('');
-
-    return `
-        <div class="result-count">${data.length} resultado${data.length !== 1 ? 's' : ''}</div>
-        <div style="overflow-x:auto">
-            <table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>
-        </div>`;
+// ════════════════════════════════════════════════════
+// DATOS
+// ════════════════════════════════════════════════════
+async function sembrar(){
+  const confirm = v('seed_confirm');
+  const msg = document.getElementById('seed_msg');
+  msg.innerHTML = '<div class="seed-ok" style="color:var(--muted)">Sembrando…</div>';
+  try {
+    const r = await fetch('/mongo/seed', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({confirm}) });
+    const data = await r.json();
+    if (r.ok){
+      const s = data.summary;
+      msg.innerHTML = '<div class="seed-ok">✓ Sembrado: ' + s.animales_insertados + ' animales, ' + s.adoptantes_insertados + ' adoptantes</div>';
+      toast('✓ Base sembrada');
+      loadSelects();
+    } else { msg.innerHTML = '<div class="seed-ok" style="color:var(--red)">' + (data.error||'Error') + '</div>'; toast(data.error||'Error', false); }
+  } catch(e){ msg.innerHTML = '<div class="seed-ok" style="color:var(--red)">Error de conexión</div>'; }
 }
 
-// ── URLs de queries ───────────────────────────────────────────────────────────
-const QUERY_URLS = {
-    q1: f => `/api/personas/${f.person_id}/recomendaciones`,
-    q2: f => `/api/refugios/${encodeURIComponent(f.nombre)}/animales`,
-    q3: f => `/api/personas/${f.person_id}/adopciones`,
-    q4: _  => `/api/animales/disponibles`,
-    q5: f => `/api/animales/${f.animal_id}/compatibles`,
-};
+// ════════════════════════════════════════════════════
+// CONSULTAS
+// ════════════════════════════════════════════════════
+function c1(){
+  const tipo = v('c1_tipo'), refugio = v('c1_refugio');
+  api('GET', '/mongo/c1/animales?tipo=' + encodeURIComponent(tipo) + '&refugio=' + encodeURIComponent(refugio), null,
+    'db.animales.find({\n  estado: "Disponible",\n  tipo: "' + tipo + '",\n  refugio: "' + refugio + '"\n})');
+}
+function c2(){
+  const ciudad = v('c2_ciudad'), viv = v('c2_vivienda'), exp = v('c2_experiencia');
+  api('GET', '/mongo/c2/adoptantes?ciudad=' + encodeURIComponent(ciudad) + '&tipo_vivienda=' + encodeURIComponent(viv) + '&experiencia=' + encodeURIComponent(exp), null,
+    'db.adoptantes.find({\n  "perfil.ciudad": "' + ciudad + '",\n  "perfil.tipo_vivienda": "' + viv + '",\n  "perfil.experiencia_mascotas": "' + exp + '"\n})');
+}
+function c3(){
+  api('GET', '/mongo/c3/reporte', null,
+    'db.animales.aggregate([\n  { $group: { _id: { estado, tipo, refugio }, total: { $sum: 1 } } },\n  { $project: { ... } },\n  { $sort: { total: -1 } }\n])');
+}
+function c4(){
+  const texto = v('c4_texto');
+  api('GET', '/mongo/c4/animales?q=' + encodeURIComponent(texto), null,
+    'db.animales.find({\n  $or: [\n    { nombre: { $regex: "' + texto + '", $options: "i" } },\n    { raza:   { $regex: "' + texto + '", $options: "i" } }\n  ]\n})');
+}
+function c5(){
+  api('GET', '/mongo/c5/adoptantes', null,
+    '// Join orquestado en Python\nadoptantes.find({ animal_id: { $ne: null } })\n// luego por cada uno:\nanimales.find_one({ animal_id })');
+}
+function c6(){
+  const vac = v('c6_vacuna');
+  api('GET', '/mongo/c6/animales?vacuna=' + encodeURIComponent(vac), null,
+    'db.animales.find({\n  "salud.vacunas": {\n    $elemMatch: { nombre: "' + vac + '" }\n  }\n})');
+}
 
-const RESULT_KEY = {
-    q1: 'recomendaciones',
-    q2: 'animales',
-    q3: 'adopciones',
-    q4: 'disponibles',
-    q5: 'personas',
-};
-
-async function query(event, qid) {
-    event.preventDefault();
-    const fields = Object.fromEntries(new FormData(event.target));
-    const resultEl = document.getElementById('r-' + qid);
-    resultEl.innerHTML = '<span class="loading">Consultando…</span>';
-    try {
-        const res  = await fetch(QUERY_URLS[qid](fields));
-        const json = await res.json();
-        const data = RESULT_KEY[qid] ? json[RESULT_KEY[qid]] : json;
-        resultEl.innerHTML = renderTable(data);
-    } catch (e) {
-        resultEl.innerHTML = `<span class="error">Error: ${e.message}</span>`;
+// ════════════════════════════════════════════════════
+// CRUD
+// ════════════════════════════════════════════════════
+async function buscarAnimal(){
+  const id = await resolverId('animales', 'crud_animal_search', 'crud_animal_id');
+  if (!id) return toast('Escribí un nombre o ID válido', false);
+  api('GET', '/mongo/animales/' + encodeURIComponent(id), null, 'db.animales.findOne({ animal_id: "' + id + '" })');
+}
+async function buscarAdoptante(){
+  const id = await resolverId('adoptantes', 'crud_adopt_search', 'crud_adopt_id');
+  if (!id) return toast('Escribí un nombre o ID válido', false);
+  api('GET', '/mongo/adoptantes/' + encodeURIComponent(id), null, 'db.adoptantes.findOne({ person_id: "' + id + '" })');
+}
+let extraCount = 0;
+function addCampo(){
+  extraCount++;
+  const div = document.createElement('div');
+  div.className = 'dyn-row';
+  div.id = 'extra_' + extraCount;
+  div.innerHTML =
+    '<div class="field"><label>Campo</label><input id="ek_' + extraCount + '" placeholder="ej: peso_kg"></div>' +
+    '<div class="field"><label>Valor</label><input id="ev_' + extraCount + '" placeholder="ej: 12.5"></div>' +
+    '<div class="field" style="max-width:130px"><label>Tipo</label>' +
+      '<select id="et_' + extraCount + '"><option value="texto">texto</option><option value="numero">número</option><option value="booleano">booleano</option></select>' +
+    '</div>' +
+    '<button class="dyn-remove" title="quitar" onclick="document.getElementById(\'extra_' + extraCount + '\').remove()">✕</button>';
+  document.getElementById('ins_extra').appendChild(div);
+}
+function insertarAnimal(){
+  const doc = {
+    animal_id: v('ins_animal_id'), nombre: v('ins_nombre'),
+    tipo: v('ins_tipo'), estado: v('ins_estado'), refugio: v('ins_refugio')
+  };
+  // campos dinámicos extra (demuestra esquema flexible + tipos de dato de Mongo)
+  for (let i = 1; i <= extraCount; i++){
+    const k = document.getElementById('ek_' + i);
+    const val = document.getElementById('ev_' + i);
+    const t = document.getElementById('et_' + i);
+    if (k && val && k.value.trim()){
+      let valor = val.value.trim();
+      if (t.value === 'numero')        valor = Number(valor);
+      else if (t.value === 'booleano') valor = (valor.toLowerCase() === 'true');
+      doc[k.value.trim()] = valor;
     }
+  }
+  api('POST', '/mongo/animales', doc, 'db.animales.insertOne(' + JSON.stringify(doc, null, 2) + ')');
+}
+async function eliminarAnimal(){
+  const id = await resolverId('animales', 'del_animal_search', 'del_animal_id');
+  if (!id) return toast('Escribí un nombre o ID válido', false);
+  api('DELETE', '/mongo/animales/' + encodeURIComponent(id), null, 'db.animales.deleteOne({ animal_id: "' + id + '" })');
 }
 
-// ── Grafo Q6 ──────────────────────────────────────────────────────────────────
-async function ejecutarGrafo() {
-    const sel = document.getElementById('sel-persona-q6');
-    const person_id = sel.value;
-    if (!person_id) return;
+// ════════════════════════════════════════════════════
+// UPDATES
+// ════════════════════════════════════════════════════
+async function u1(){ const id=await resolverId('animales','u1_search','u1_id'); if(!id)return toast('Escribí un nombre o ID de animal',false);
+  api('POST','/mongo/ops/update',{op:'u1',animal_id:id,estado:v('u1_estado')},
+  'db.animales.updateOne(\n  { animal_id: "'+id+'" },\n  { $set: { estado: "'+v('u1_estado')+'" } }\n)'); }
+async function u2(){ const id=await resolverId('adoptantes','u2_search','u2_id'); if(!id)return toast('Escribí un nombre o ID de adoptante',false);
+  api('POST','/mongo/ops/update',{op:'u2',person_id:id,ciudad:v('u2_ciudad'),tipo_vivienda:v('u2_vivienda'),experiencia:v('u2_exp')},
+  'db.adoptantes.updateOne(\n  { person_id: "'+id+'" },\n  { $set: {\n    "perfil.ciudad": "'+v('u2_ciudad')+'",\n    "perfil.tipo_vivienda": "'+v('u2_vivienda')+'",\n    "perfil.experiencia_mascotas": "'+v('u2_exp')+'"\n  } }\n)'); }
+async function u3(){ const id=await resolverId('animales','u3_search','u3_id'); if(!id)return toast('Escribí un nombre o ID de animal',false);
+  api('POST','/mongo/ops/update',{op:'u3',animal_id:id},
+  'db.animales.updateOne(\n  { animal_id: "'+id+'" },\n  { $inc: { veces_destacado: 1 } }\n)'); }
+async function u4(){ const id=await resolverId('animales','u4_search','u4_id'); if(!id)return toast('Escribí un nombre o ID de animal',false);
+  api('POST','/mongo/ops/update',{op:'u4',animal_id:id,vacuna:v('u4_vacuna')},
+  'db.animales.updateOne(\n  { animal_id: "'+id+'" },\n  { $push: { "salud.vacunas": { nombre: "'+v('u4_vacuna')+'", fecha: ISODate() } } }\n)'); }
+async function u5(){ const id=await resolverId('adoptantes','u5_search','u5_id'); if(!id)return toast('Escribí un nombre o ID de adoptante',false);
+  api('POST','/mongo/ops/update',{op:'u5',person_id:id,campo:v('u5_campo')},
+  'db.adoptantes.updateOne(\n  { person_id: "'+id+'" },\n  { $unset: { '+v('u5_campo')+': "" } }\n)'); }
+async function u6(){ const id=await resolverId('animales','u6_search','u6_id'); if(!id)return toast('Escribí un nombre o ID de animal',false);
+  api('POST','/mongo/ops/update',{op:'u6',animal_id:id,tag:v('u6_tag')},
+  'db.animales.updateOne(\n  { animal_id: "'+id+'" },\n  { $addToSet: { tags: "'+v('u6_tag')+'" } }\n)'); }
+function u7(){
+  api('POST','/mongo/ops/update',{op:'u7',refugio:v('u7_refugio'),estado:v('u7_estado')},
+  'db.animales.updateMany(\n  { refugio: "'+v('u7_refugio')+'" },\n  { $set: { estado: "'+v('u7_estado')+'" } }\n)'); }
 
-    const personaNombre = sel.options[sel.selectedIndex].text.split(' — ')[0];
-    const container = document.getElementById('grafo-container');
-    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:.82rem;">Cargando grafo…</div>';
+// ════════════════════════════════════════════════════
+// DELETES
+// ════════════════════════════════════════════════════
+async function d1(){ const id=await resolverId('animales','d1_search','d1_id'); if(!id)return toast('Escribí un nombre o ID de animal',false);
+  api('POST','/mongo/ops/delete',{op:'d1',animal_id:id},'db.animales.deleteOne({ animal_id: "'+id+'" })'); }
+async function d2(){ const id=await resolverId('adoptantes','d2_search','d2_id'); if(!id)return toast('Escribí un nombre o ID de adoptante',false);
+  api('POST','/mongo/ops/delete',{op:'d2',person_id:id},'db.adoptantes.deleteOne({ person_id: "'+id+'" })'); }
+function d3(){ api('POST','/mongo/ops/delete',{op:'d3',estado:v('d3_estado')},
+  'db.animales.deleteMany({ estado: "'+v('d3_estado')+'" })'); }
+function d4(){ api('POST','/mongo/ops/delete',{op:'d4'},
+  'db.adoptantes.deleteMany({\n  $or: [\n    { email: { $exists: false } },\n    { email: null }\n  ]\n})'); }
+function d5(){ api('POST','/mongo/ops/delete',{op:'d5',fecha:v('d5_fecha')},
+  'db.animales.deleteMany({\n  fecha_ingreso: { $lt: ISODate("'+v('d5_fecha')+'") }\n})'); }
+function d6(){ api('POST','/mongo/ops/delete',{op:'d6',refugio:v('d6_refugio'),estado:v('d6_estado')},
+  'db.animales.deleteMany({\n  refugio: "'+v('d6_refugio')+'",\n  estado: "'+v('d6_estado')+'"\n})'); }
+function d7(){
+  const ids = v('d7_ids').split(',').map(s=>s.trim()).filter(Boolean);
+  api('POST','/mongo/ops/delete',{op:'d7',ids:ids},
+  'db.animales.deleteMany({\n  animal_id: { $in: ' + JSON.stringify(ids) + ' }\n})'); }
 
-    try {
-        const res  = await fetch(`/api/personas/${person_id}/grafo`);
-        const json = await res.json();
-        const data = json.grafo;
-
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:.82rem;font-style:italic;">Sin resultados</div>';
-            return;
-        }
-
-        container.innerHTML = '';
-
-        const nodes = new vis.DataSet();
-        const edges = new vis.DataSet();
-
-        // Nodo persona (centro)
-        nodes.add({
-            id: 'p_' + person_id,
-            label: personaNombre,
-            color: { background: '#018BFF', border: '#0070d4', highlight: { background: '#0070d4', border: '#005bb5' } },
-            font: { color: 'white', size: 13 },
-            shape: 'ellipse',
-            size: 30,
-        });
-
-        // Nodos animales
-        data.forEach(row => {
-            const color = row.animal_tipo === 'Perro' ? '#F97316' : '#8B5CF6';
-            const borderColor = row.animal_tipo === 'Perro' ? '#C2410C' : '#6D28D9';
-            if (!nodes.get('a_' + row.animal_id)) {
-                nodes.add({
-                    id: 'a_' + row.animal_id,
-                    label: row.animal_nombre + '\n(' + row.animal_tipo + ')',
-                    color: { background: color, border: borderColor, highlight: { background: borderColor, border: borderColor } },
-                    font: { color: 'white', size: 11 },
-                    shape: 'dot',
-                    size: 18,
-                });
-            }
-            edges.add({
-                from: 'p_' + person_id,
-                to: 'a_' + row.animal_id,
-                color: { color: '#CBD5E1', highlight: '#018BFF' },
-                width: 1.5,
-            });
-        });
-
-        new vis.Network(container, { nodes, edges }, {
-            physics: {
-                enabled: true,
-                stabilization: { iterations: 100 },
-                barnesHut: { gravitationalConstant: -3000, springLength: 100 }
-            },
-            edges: { smooth: { type: 'continuous' } },
-            nodes: { borderWidth: 2 },
-            interaction: { dragNodes: true, zoomView: true, dragView: true },
-        });
-
-    } catch (e) {
-        container.innerHTML = `<div style="padding:1rem;color:#c62828;font-size:.8rem;">Error: ${e.message}</div>`;
-    }
+// ════════════════════════════════════════════════════
+// CARGAR SELECTS (tipos, refugios, ciudades…)
+// ════════════════════════════════════════════════════
+async function loadSelects(){
+  try {
+    const r = await fetch('/mongo/samples');
+    const d = await r.json();
+    const fill = (id, arr) => { const el = document.getElementById(id); if (el && arr) el.innerHTML = arr.map(x => '<option>' + x + '</option>').join(''); };
+    fill('c1_tipo', d.tipos); fill('c1_refugio', d.refugios);
+    fill('c2_ciudad', d.ciudades); fill('c2_vivienda', d.viviendas); fill('c2_experiencia', d.experiencias);
+    fill('u7_refugio', d.refugios); fill('d6_refugio', d.refugios);
+  } catch(e){ console.error('Error cargando selects', e); }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Init ──
 loadSelects();
 </script>
 </body>
-</html>
+</html> 

@@ -22,6 +22,7 @@ import os
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from dotenv import load_dotenv
+import ssl
 
 load_dotenv(override = True)
 
@@ -42,7 +43,7 @@ def get_client():
     """
     global _client
     if _client is None:
-        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000, tls=True, tlsAllowInvalidCertificates=True)
         # Ping para validar la conexión al primer uso
         _client.admin.command("ping")
     return _client
@@ -74,14 +75,16 @@ def ensure_indexes():
         [("tipo", ASCENDING), ("estado", ASCENDING), ("refugio", ASCENDING)],
         name="idx_tipo_estado_refugio"
     )
+    # Índice sobre el array de vacunas embebidas (para C6 con $elemMatch)
+    db["animales"].create_index("salud.vacunas.nombre", name="idx_vacuna_nombre")
 
     # — adoptantes —
     db["adoptantes"].create_index("person_id", unique=True, name="idx_person_id")
-    db["adoptantes"].create_index("ciudad",    name="idx_ciudad")
+    db["adoptantes"].create_index("perfil.ciudad", name="idx_ciudad")
     db["adoptantes"].create_index("animal_id", name="idx_animal_id_adoptante")
-    # Índice compuesto para búsqueda por perfil
+    # Índice compuesto para búsqueda por perfil (campos dentro del sub-documento)
     db["adoptantes"].create_index(
-        [("ciudad", ASCENDING), ("tipo_vivienda", ASCENDING), ("experiencia_mascotas", ASCENDING)],
+        [("perfil.ciudad", ASCENDING), ("perfil.tipo_vivienda", ASCENDING), ("perfil.experiencia_mascotas", ASCENDING)],
         name="idx_perfil_adoptante"
     )
 
@@ -90,12 +93,28 @@ def ensure_indexes():
 
 def _clean(doc):
     """
-    Convierte el ObjectId de MongoDB (_id) a string para que sea
-    serializable a JSON por Flask. Retorna el doc modificado.
+    Normaliza un documento para que Flask pueda serializarlo a JSON:
+    - ObjectId (_id) → string
+    - datetime (ISODate) → string ISO 'YYYY-MM-DD' (incluso dentro de
+      sub-documentos y arrays, ej. 'salud.vacunas[].fecha')
+    Recorre el documento en profundidad. Retorna el doc modificado.
     """
-    if doc and "_id" in doc:
+    from datetime import datetime, date
+
+    def _norm(v):
+        if isinstance(v, (datetime, date)):
+            return v.strftime("%Y-%m-%d")          # ISODate → string legible
+        if isinstance(v, dict):
+            return {k: _norm(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [_norm(x) for x in v]
+        return v
+
+    if not doc:
+        return doc
+    if "_id" in doc:
         doc["_id"] = str(doc["_id"])
-    return doc
+    return {k: _norm(v) for k, v in doc.items()}
 
 
 def _clean_list(docs):
@@ -286,7 +305,7 @@ def consulta_1_animales_disponibles(tipo: str, refugio: str) -> list:
             {"_id": 0, "animal_id": 1, "nombre": 1, "raza": 1,
              "color": 1, "sexo": 1, "fecha_ingreso": 1}
         )
-        return list(cursor)
+        return _clean_list(list(cursor))
     except PyMongoError:
         return []
 
@@ -300,14 +319,14 @@ def consulta_2_adoptantes_por_perfil(ciudad: str, tipo_vivienda: str, experienci
     try:
         cursor = get_db()["adoptantes"].find(
             {
-                "ciudad"              : ciudad,
-                "tipo_vivienda"       : tipo_vivienda,
-                "experiencia_mascotas": experiencia
+                "perfil.ciudad"              : ciudad,
+                "perfil.tipo_vivienda"       : tipo_vivienda,
+                "perfil.experiencia_mascotas": experiencia
             },
             {"_id": 0, "person_id": 1, "nombre": 1, "apellido": 1,
-             "sexo": 1, "telefono": 1, "email": 1}
+             "sexo": 1, "telefono": 1, "email": 1, "perfil": 1}
         )
-        return list(cursor)
+        return _clean_list(list(cursor))
     except PyMongoError:
         return []
 
@@ -341,18 +360,21 @@ def consulta_3_reporte_por_estado_y_tipo() -> list:
         return []
 
 
-def consulta_4_animales_por_inicial(letra: str) -> list:
+def consulta_4_buscador(texto: str) -> list:
     """
-    C4 — Regex: animales cuyo nombre empieza con la letra dada,
-    sin distinguir mayúsculas/minúsculas ($options: 'i').
+    C4 — Buscador de texto libre con $regex sobre múltiples campos.
+    Busca el texto (parcial, sin distinguir mayúsculas) tanto en el nombre
+    como en la raza del animal, usando $or. Simula la barra de búsqueda
+    real del sistema (no busca "por inicial", busca lo que el usuario tipea).
     """
     try:
+        patron = _regex_flexible(texto)   # parcial, ignora mayúsculas Y tildes
         cursor = get_db()["animales"].find(
-            {"nombre": {"$regex": f"^{letra}", "$options": "i"}},
+            {"$or": [{"nombre": patron}, {"raza": patron}]},
             {"_id": 0, "animal_id": 1, "nombre": 1, "tipo": 1,
              "raza": 1, "estado": 1, "refugio": 1}
-        )
-        return list(cursor)
+        ).limit(50)
+        return _clean_list(list(cursor))
     except PyMongoError:
         return []
 
@@ -379,7 +401,28 @@ def consulta_5_adoptantes_con_animal() -> list:
             )
             adoptante["animal_info"] = animal or {}
 
-        return adoptantes
+        return _clean_list(adoptantes)
+    except PyMongoError:
+        return []
+
+
+def consulta_6_animales_por_vacuna(nombre_vacuna: str) -> list:
+    """
+    C6 — Consulta sobre array de documentos embebidos con $elemMatch.
+    Devuelve los animales que tienen aplicada una vacuna específica
+    dentro de su array 'salud.vacunas'.
+
+    ⭐ Esta es la consulta que justifica el modelo documental: en SQL
+    requeriría una tabla 'vacunas' aparte y un JOIN; acá la vacuna vive
+    embebida en el animal y se filtra en una sola lectura.
+    """
+    try:
+        cursor = get_db()["animales"].find(
+            {"salud.vacunas": {"$elemMatch": {"nombre": nombre_vacuna}}},
+            {"_id": 0, "animal_id": 1, "nombre": 1, "tipo": 1,
+             "raza": 1, "estado": 1, "salud.vacunas": 1}
+        ).limit(50)
+        return _clean_list(list(cursor))
     except PyMongoError:
         return []
 
@@ -406,9 +449,9 @@ def update_2_perfil_adoptante(person_id: str, ciudad: str, tipo_vivienda: str, e
         res = get_db()["adoptantes"].update_one(
             {"person_id": person_id},
             {"$set": {
-                "ciudad"              : ciudad,
-                "tipo_vivienda"       : tipo_vivienda,
-                "experiencia_mascotas": experiencia
+                "perfil.ciudad"              : ciudad,
+                "perfil.tipo_vivienda"       : tipo_vivienda,
+                "perfil.experiencia_mascotas": experiencia
             }}
         )
         return {"op": "$set perfil", "modified": res.modified_count}
@@ -417,25 +460,30 @@ def update_2_perfil_adoptante(person_id: str, ciudad: str, tipo_vivienda: str, e
 
 
 def update_3_incrementar_visitas(animal_id: str, cantidad: int = 1) -> dict:
-    """U3 — $inc: incrementa el contador de visitas. Si no existe el campo, lo crea en 0 y suma."""
+    """U3 — $inc: incrementa el contador 'veces_destacado' del animal (cuántas
+    veces el refugio lo destacó en el catálogo). Si el campo no existe, $inc lo
+    crea en 0 y suma. Nota: esto es un contador interno del documento en Mongo,
+    distinto del ranking de popularidad que vive en Redis."""
     try:
         res = get_db()["animales"].update_one(
             {"animal_id": animal_id},
-            {"$inc": {"visitas": cantidad}}
+            {"$inc": {"veces_destacado": cantidad}}
         )
-        return {"op": "$inc visitas", "modified": res.modified_count}
+        return {"op": "$inc veces_destacado", "modified": res.modified_count}
     except PyMongoError as e:
         return {"error": str(e)}
 
 
 def update_4_agregar_vacuna(animal_id: str, vacuna: str) -> dict:
-    """U4 — $push: agrega una vacuna al array 'vacunas' del animal."""
+    """U4 — $push: agrega una vacuna (como objeto {nombre, fecha}) al array
+    embebido 'salud.vacunas', coherente con el modelo del seeder."""
+    from datetime import datetime
     try:
         res = get_db()["animales"].update_one(
             {"animal_id": animal_id},
-            {"$push": {"vacunas": vacuna}}
+            {"$push": {"salud.vacunas": {"nombre": vacuna, "fecha": datetime.now()}}}
         )
-        return {"op": "$push vacuna", "modified": res.modified_count}
+        return {"op": "$push salud.vacunas", "modified": res.modified_count}
     except PyMongoError as e:
         return {"error": str(e)}
 
@@ -525,13 +573,17 @@ def delete_4_adoptantes_sin_email() -> dict:
 
 
 def delete_5_animales_anteriores_a(fecha_limite: str) -> dict:
-    """D5 — delete_many con $lt: elimina animales ingresados antes de una fecha."""
+    """D5 — delete_many con $lt: elimina animales ingresados antes de una fecha.
+    Convierte el string 'YYYY-MM-DD' que llega del front a datetime (ISODate)
+    para comparar fecha contra fecha (no string contra string)."""
+    from datetime import datetime
     try:
+        limite = datetime.strptime(fecha_limite, "%Y-%m-%d")
         res = get_db()["animales"].delete_many(
-            {"fecha_ingreso": {"$lt": fecha_limite}}
+            {"fecha_ingreso": {"$lt": limite}}
         )
         return {"op": f"delete antes de {fecha_limite}", "deleted": res.deleted_count}
-    except PyMongoError as e:
+    except (PyMongoError, ValueError) as e:
         return {"error": str(e)}
 
 
@@ -618,9 +670,9 @@ def get_sample_data() -> dict:
         tipos    = db["animales"].distinct("tipo")
         refugios = db["animales"].distinct("refugio")
         estados  = db["animales"].distinct("estado")
-        ciudades = db["adoptantes"].distinct("ciudad")
-        viviendas    = db["adoptantes"].distinct("tipo_vivienda")
-        experiencias = db["adoptantes"].distinct("experiencia_mascotas")
+        ciudades = db["adoptantes"].distinct("perfil.ciudad")
+        viviendas    = db["adoptantes"].distinct("perfil.tipo_vivienda")
+        experiencias = db["adoptantes"].distinct("perfil.experiencia_mascotas")
 
         return {
             "animales"   : animales,
@@ -634,3 +686,94 @@ def get_sample_data() -> dict:
         }
     except PyMongoError:
         return {}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# BÚSQUEDA DINÁMICA (reemplaza el limit(30) de los dropdowns)
+# ════════════════════════════════════════════════════════════════════════════
+
+def _regex_flexible(texto: str) -> dict:
+    """
+    Construye un patrón $regex que ignora mayúsculas Y tildes.
+    Reemplaza cada vocal por una clase de caracteres que matchea todas
+    sus variantes acentuadas: 'siames' o 'Siamés' encuentran lo mismo.
+    También escapa caracteres especiales de regex para que una búsqueda
+    como 'A.B' no se interprete como comodín.
+    """
+    import re
+    grupos = {
+        "a": "[aáàäâ]", "e": "[eéèëê]", "i": "[iíìïî]",
+        "o": "[oóòöô]", "u": "[uúùüû]", "n": "[nñ]", "c": "[cç]",
+    }
+    patron = ""
+    for ch in texto:
+        base = ch.lower()
+        # quitamos la tilde del char tipeado para mapearlo a su vocal base
+        sin_tilde = {"á":"a","é":"e","í":"i","ó":"o","ú":"u","ñ":"n","ç":"c",
+                     "à":"a","è":"e","ì":"i","ò":"o","ù":"u",
+                     "ä":"a","ë":"e","ï":"i","ö":"o","ü":"u"}.get(base, base)
+        if sin_tilde in grupos:
+            patron += grupos[sin_tilde]
+        else:
+            patron += re.escape(ch)
+    return {"$regex": patron, "$options": "i"}
+
+
+def buscar_animales_dinamico(texto: str, limite: int = 15) -> list:
+    """
+    Busca animales en vivo por nombre O animal_id (coincidencia parcial,
+    sin distinguir mayúsculas ni tildes). Alimenta el buscador type-ahead,
+    permitiendo llegar a CUALQUIERA de los 1000 animales. Si el texto viene
+    vacío, devuelve una muestra inicial.
+    """
+    try:
+        db = get_db()
+        if not texto:
+            cursor = db["animales"].find(
+                {}, {"_id": 0, "animal_id": 1, "nombre": 1, "tipo": 1}
+            ).limit(limite)
+        else:
+            patron = _regex_flexible(texto)
+            cursor = db["animales"].find(
+                {"$or": [{"nombre": patron}, {"animal_id": patron}]},
+                {"_id": 0, "animal_id": 1, "nombre": 1, "tipo": 1}
+            ).limit(limite)
+        return list(cursor)
+    except PyMongoError:
+        return []
+
+
+def buscar_adoptantes_dinamico(texto: str, limite: int = 15) -> list:
+    """
+    Busca adoptantes en vivo por nombre, apellido, 'nombre apellido' juntos,
+    O person_id (parcial, sin distinguir mayúsculas ni tildes).
+    """
+    try:
+        db = get_db()
+        if not texto:
+            cursor = db["adoptantes"].find(
+                {}, {"_id": 0, "person_id": 1, "nombre": 1, "apellido": 1}
+            ).limit(limite)
+            return list(cursor)
+
+        patron = _regex_flexible(texto)
+        condiciones = [
+            {"nombre": patron},
+            {"apellido": patron},
+            {"person_id": patron},
+        ]
+        # Si el texto tiene dos palabras (ej. "Valentina Garcia"), buscamos
+        # también que la primera matchee nombre y la segunda apellido.
+        partes = texto.split()
+        if len(partes) >= 2:
+            condiciones.append({
+                "nombre": _regex_flexible(partes[0]),
+                "apellido": _regex_flexible(" ".join(partes[1:])),
+            })
+        cursor = db["adoptantes"].find(
+            {"$or": condiciones},
+            {"_id": 0, "person_id": 1, "nombre": 1, "apellido": 1}
+        ).limit(limite)
+        return list(cursor)
+    except PyMongoError:
+        return []

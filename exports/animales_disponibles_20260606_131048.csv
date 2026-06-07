@@ -1,0 +1,489 @@
+﻿animal_id,nombre,tipo,refugio,raza,sexo,fecha_ingreso
+,,Perro,,,,
+A000625,Isabella,Gato,Huellitas,Mestizo,Hembra,2026-05-29
+A000215,Juan Cruz,Gato,Huellitas,Mestizo,Hembra,2026-04-09
+A000647,Santiago,Gato,Huellitas,Mestizo,Hembra,2024-09-03
+A000230,Juan Pablo,Gato,Huellitas,Mestizo,Hembra,2025-05-30
+A000637,Sofia,Gato,Huellitas,Persa,Hembra,2026-05-16
+A000636,Felipe,Gato,Huellitas,Mestizo,Macho,2025-01-12
+A000241,Valentina,Gato,Huellitas,Ragdoll,Macho,2025-08-26
+A000630,Sara,Gato,Huellitas,Siamés,Hembra,2024-09-17
+A000247,Santino Gabriel,Gato,Huellitas,Persa,Macho,2022-03-02
+A000654,Zoe,Gato,Huellitas,Bengalí,Hembra,2026-05-21
+A000255,Santino,Gato,Huellitas,Maine Coon,Hembra,2021-06-11
+A000260,Juan Ignacio,Gato,Huellitas,Ragdoll,Macho,2016-10-28
+A000602,Thiago Benjamin,Gato,Huellitas,Doméstico de pelo corto,Hembra,2025-10-03
+A000270,Juan Francisco,Gato,Huellitas,Maine Coon,Macho,2026-03-30
+A000284,Francisco,Gato,Huellitas,Doméstico de pelo corto,Macho,2025-07-03
+A000285,Sofia,Gato,Huellitas,Persa,Macho,2023-07-02
+A000289,Olivia,Gato,Huellitas,Mestizo,Macho,2021-10-25
+A000292,Santino,Gato,Huellitas,Ragdoll,Macho,2024-11-25
+A000669,Milena,Gato,Huellitas,Persa,Hembra,2025-05-03
+A000200,Guillermina,Gato,Huellitas,Mestizo,Macho,2021-10-18
+A000674,Agustina,Gato,Huellitas,Persa,Hembra,2022-01-14
+A000679,Ana Paula,Gato,Huellitas,Persa,Macho,2021-07-31
+A000722,Catalina,Gato,Huellitas,Ragdoll,Macho,2021-11-16
+A000179,Agustin,Gato,Huellitas,Ragdoll,Hembra,2026-02-27
+A000178,Juan Pablo,Gato,Huellitas,Persa,Macho,2025-12-17
+A000737,Victoria,Gato,Huellitas,Siamés,Macho,2024-01-12
+A000175,Emilia,Gato,Huellitas,Persa,Macho,2024-05-11
+A000741,Ian Benjamin,Gato,Huellitas,Persa,Hembra,2026-01-30
+A000744,Felipe,Gato,Huellitas,Mestizo,Macho,2018-11-12
+A000774,Mia,Gato,Huellitas,Mestizo,Hembra,2022-11-13
+A000777,Santino Benjamin,Gato,Huellitas,Mestizo,Hembra,2024-12-21
+A000788,Maria Guadalupe,Gato,Huellitas,Siamés,Hembra,2023-09-23
+A000790,Isabella,Gato,Huellitas,Bengalí,Macho,2020-07-03
+A000349,Maia,Gato,Huellitas,Persa,Macho,2021-10-18
+A000405,Maria Emilia,Gato,Huellitas,Persa,Macho,2025-05-22
+A000406,Uma,Gato,Huellitas,Maine Coon,Macho,2023-11-26
+A000400,Dante,Gato,Huellitas,Siamés,Macho,2020-05-29
+A000396,Clara,Gato,Huellitas,Maine Coon,Macho,2020-05-05
+A000418,Benjamin,Gato,Huellitas,Ragdoll,Macho,2025-05-07
+A000385,Morena Jazmin,Gato,Huellitas,Siamés,Hembra,2023-09-27
+A000382,Delfina,Gato,Huellitas,Siamés,Hembra,2023-10-19
+A000380,Pilar,Gato,Huellitas,Bengalí,Hembra,2020-08-19
+A000375,Bautista,Gato,Huellitas,Doméstico de pelo corto,Hembra,2024-03-30
+A000433,Juana,Gato,Huellitas,Ragdoll,Macho,2026-05-31
+A000443,Luisana,Gato,Huellitas,Mestizo,Hembra,2022-07-17
+A000448,Juan Cruz,Gato,Huellitas,Doméstico de pelo corto,Hembra,2025-05-31
+A000485,Lola,Gato,Huellitas,Persa,Macho,2026-06-03
+A000497,Juana,Gato,Huellitas,Siamés,Macho,2018-08-26
+A000350,Juana,Gato,Huellitas,Persa,Macho,2025-10-11
+A000001,Catalina,Gato,Huellitas,Doméstico de pelo corto,Macho,2024-12-22
+A000522,Simon,Gato,Huellitas,Persa,Macho,2022-10-02
+A000526,Guillermina,Gato,Huellitas,Ragdoll,Macho,2025-02-25
+A000332,Paulina,Gato,Huellitas,Siamés,Macho,2022-07-07
+A000327,Morena,Gato,Huellitas,Ragdoll,Macho,2026-03-22
+A000540,Bianca,Gato,Huellitas,Mestizo,Macho,2024-10-20
+A000324,Helena,Gato,Huellitas,Maine Coon,Hembra,2023-07-10
+A000542,Thiago Joaquin,Gato,Huellitas,Siamés,Macho,2025-07-21
+A000556,Valentino,Gato,Huellitas,Mestizo,Hembra,2026-01-29
+A000316,Agustina,Gato,Huellitas,Mestizo,Hembra,2025-03-09
+A000313,Mateo Joaquin,Gato,Huellitas,Persa,Macho,2024-10-03
+A000559,Delfina,Gato,Huellitas,Persa,Hembra,2024-05-11
+A000561,Valentina Jazmin,Gato,Huellitas,Maine Coon,Macho,2023-11-10
+A000302,Joaquín,Gato,Huellitas,Persa,Macho,2025-11-12
+A000586,Valentina ,Gato,Huellitas,Maine Coon,Macho,2025-11-15
+A000296,Mia,Gato,Huellitas,Mestizo,Hembra,2017-03-21
+A000881,Alvaro,Gato,Huellitas,Mestizo,Hembra,2024-10-15
+A000033,Paula,Gato,Huellitas,Mestizo,Macho,2024-10-14
+A000923,Ciro,Gato,Huellitas,Persa,Hembra,2024-12-09
+A000954,Felipe,Gato,Huellitas,Doméstico de pelo corto,Hembra,2025-02-19
+A000116,Helena,Gato,Huellitas,Doméstico de pelo corto,Hembra,2025-12-28
+A000069,Mora,Gato,Huellitas,Doméstico de pelo corto,Hembra,2017-01-09
+A000986,Fausto,Gato,Huellitas,Siamés,Macho,2024-11-07
+A000984,Santino Agustin,Gato,Huellitas,Mestizo,Hembra,2025-08-26
+A000074,Valentina,Gato,Huellitas,Mestizo,Macho,2019-02-05
+A000928,Ciro,Gato,Huellitas,Persa,Macho,2022-10-31
+A000842,Juan Martin,Gato,Huellitas,Maine Coon,Macho,2024-06-08
+A000978,Santino,Gato,Huellitas,Doméstico de pelo corto,Hembra,2025-11-05
+A000076,Micaela,Gato,Huellitas,Siamés,Macho,2025-12-18
+A000970,Juan David,Gato,Huellitas,Maine Coon,Macho,2026-06-04
+A000865,Ignacio,Gato,Huellitas,Doméstico de pelo corto,Hembra,2021-08-28
+A000101,Catalina,Gato,Huellitas,Maine Coon,Macho,2021-05-15
+A000037,Thiago Ezequiel,Gato,Huellitas,Siamés,Macho,2022-09-12
+A000036,Juan Manuel,Gato,Huellitas,Maine Coon,Hembra,2025-11-20
+A000945,Maria Belen,Gato,Huellitas,Doméstico de pelo corto,Hembra,2026-03-12
+A000807,Isabella,Gato,Huellitas,Ragdoll,Hembra,2026-04-20
+A000993,Thiago Nahuel,Gato,Huellitas,Siamés,Macho,2023-05-10
+A000009,Josefina,Gato,Huellitas,Siamés,Hembra,2026-01-30
+A000059,Rafael,Gato,Huellitas,Maine Coon,Macho,2020-07-28
+A000035,Juan Martin,Gato,Huellitas,Maine Coon,Macho,2020-07-09
+A000996,Juan Martin,Gato,Huellitas,Doméstico de pelo corto,Macho,2021-10-12
+A000016,Camilo,Gato,Huellitas,Ragdoll,Hembra,2023-08-13
+A000061,Miguel Angel,Gato,Huellitas,Bengalí,Macho,2025-05-03
+A000947,Benjamin,Gato,Huellitas,Maine Coon,Hembra,2023-08-31
+A000952,Matias,Gato,Huellitas,Maine Coon,Hembra,2023-07-05
+A000128,Pedro,Gato,Huellitas,Doméstico de pelo corto,Macho,2021-07-30
+A000814,Franco,Gato,Huellitas,Bengalí,Hembra,2025-02-17
+A000816,Valentin,Gato,Huellitas,Doméstico de pelo corto,Macho,2023-11-21
+A000817,Juana,Gato,Huellitas,Maine Coon,Macho,2017-09-12
+A000820,Francesca,Gato,Huellitas,Maine Coon,Hembra,2021-05-02
+A000828,Olivia,Gato,Huellitas,Ragdoll,Macho,2024-11-26
+A000475,Felipe,Perro,Huellitas,Labrador,Hembra,2021-05-22
+A000520,Camila,Perro,Huellitas,Beagle,Macho,2026-03-14
+A000514,Vicente,Perro,Huellitas,Labrador,Macho,2024-10-04
+A000512,Martín,Perro,Huellitas,Poodle,Macho,2025-11-19
+A000532,Julieta,Perro,Huellitas,Golden Retriever,Macho,2017-12-13
+A000536,Mateo Ezequiel,Perro,Huellitas,Poodle,Hembra,2023-12-28
+A000537,Máximo,Perro,Huellitas,Mestizo,Macho,2025-08-16
+A000967,Uma ,Perro,Huellitas,Mestizo,Macho,2022-03-24
+A000961,Benjamin,Perro,Huellitas,Poodle,Macho,2021-07-31
+A000539,Francisco,Perro,Huellitas,Bulldog,Hembra,2021-03-24
+A000953,Bianca,Perro,Huellitas,Beagle,Hembra,2026-05-27
+A000944,Paula,Perro,Huellitas,Mestizo,Macho,2026-01-10
+A000560,Tomàs,Perro,Huellitas,Pastor Alemán,Hembra,2026-02-10
+A000438,Valentina Jazmin,Perro,Huellitas,Labrador,Macho,2025-09-09
+A000791,Bautista,Perro,Huellitas,Labrador,Hembra,2025-08-16
+A000410,Octavio,Perro,Huellitas,Poodle,Macho,2019-09-25
+A000415,Santiago,Perro,Huellitas,Pastor Alemán,Macho,2019-06-09
+A000422,Bautista Benjamin,Perro,Huellitas,Chihuahua,Hembra,2023-09-11
+A000991,Lautaro Benjamin,Perro,Huellitas,Chihuahua,Hembra,2025-02-15
+A000990,Angelina,Perro,Huellitas,Bulldog,Macho,2022-12-18
+A000423,Valentina,Perro,Huellitas,Mestizo,Hembra,2018-03-08
+A000987,Rafael,Perro,Huellitas,Poodle,Macho,2022-10-12
+A000424,Joaquin,Perro,Huellitas,Labrador,Macho,2026-01-06
+A000426,Sofia,Perro,Huellitas,Mestizo,Macho,2026-05-11
+A000427,Renata,Perro,Huellitas,Beagle,Hembra,2025-05-27
+A000429,Vicente,Perro,Huellitas,Beagle,Macho,2025-11-24
+A000505,Felipe,Perro,Huellitas,Poodle,Hembra,2026-01-25
+A000982,Morena,Perro,Huellitas,Beagle,Macho,2016-02-22
+A000446,Mora,Perro,Huellitas,Golden Retriever,Hembra,2024-06-02
+A000456,Ramiro,Perro,Huellitas,Poodle,Hembra,2023-09-26
+A000462,Martina,Perro,Huellitas,Poodle,Hembra,2024-12-18
+A000465,Santino,Perro,Huellitas,Bulldog,Hembra,2025-12-03
+A000471,Facundo,Perro,Huellitas,Pastor Alemán,Macho,2024-06-14
+A000002,Josefina,Perro,Huellitas,Golden Retriever,Hembra,2022-07-06
+A000479,Mia Valentina,Perro,Huellitas,Bulldog,Macho,2025-06-20
+A000484,Alejo,Perro,Huellitas,Mestizo,Hembra,2025-12-04
+A000974,Juana,Perro,Huellitas,Pastor Alemán,Hembra,2021-07-26
+A000501,Delfina,Perro,Huellitas,Golden Retriever,Macho,2022-01-22
+A000701,Simon,Perro,Huellitas,Beagle,Hembra,2022-09-23
+A000642,Alma,Perro,Huellitas,Labrador,Hembra,2025-08-29
+A000645,Lucía,Perro,Huellitas,Golden Retriever,Macho,2021-08-25
+A000859,Delfina,Perro,Huellitas,Chihuahua,Hembra,2025-12-16
+A000651,Francesca,Perro,Huellitas,Poodle,Hembra,2022-05-31
+A000847,Matias,Perro,Huellitas,Labrador,Hembra,2022-02-04
+A000653,Benjamin,Perro,Huellitas,Mestizo,Macho,2026-02-28
+A000665,Juan Bautista,Perro,Huellitas,Poodle,Hembra,2020-11-23
+A000839,Salvador,Perro,Huellitas,Pastor Alemán,Hembra,2025-12-09
+A000672,Renata,Perro,Huellitas,Pastor Alemán,Macho,2022-05-28
+A000837,Martina,Perro,Huellitas,Chihuahua,Macho,2023-12-15
+A000830,Lorenzo,Perro,Huellitas,Poodle,Hembra,2025-09-30
+A000681,Sofía,Perro,Huellitas,Chihuahua,Macho,2019-05-23
+A000699,Santiago,Perro,Huellitas,Pastor Alemán,Hembra,2021-11-17
+A000641,Juan Pablo,Perro,Huellitas,Bulldog,Hembra,2025-11-04
+A000717,Agustin,Perro,Huellitas,Labrador,Macho,2025-08-14
+A000811,Agustin,Perro,Huellitas,Mestizo,Macho,2025-11-26
+A000745,León,Perro,Huellitas,Golden Retriever,Macho,2023-06-18
+A000746,Santino,Perro,Huellitas,Mestizo,Hembra,2026-05-28
+A000749,Josefina,Perro,Huellitas,Bulldog,Hembra,2021-07-28
+A000751,Bautista,Perro,Huellitas,Mestizo,Hembra,2025-08-03
+A000757,Isabel,Perro,Huellitas,Bulldog,Hembra,2026-04-27
+A000770,Catalina,Perro,Huellitas,Beagle,Hembra,2025-11-30
+A000809,Lucas,Perro,Huellitas,Chihuahua,Macho,2025-03-30
+A000783,Santino,Perro,Huellitas,Golden Retriever,Macho,2020-10-30
+A000801,Lucas,Perro,Huellitas,Mestizo,Hembra,2020-04-07
+A000800,Clara,Perro,Huellitas,Bulldog,Hembra,2024-10-29
+A000609,Valentina,Perro,Huellitas,Mestizo,Hembra,2019-01-08
+A000568,Luca,Perro,Huellitas,Labrador,Macho,2026-03-17
+A000574,Bautista,Perro,Huellitas,Mestizo,Macho,2026-01-19
+A000580,Valentin,Perro,Huellitas,Golden Retriever,Macho,2023-06-24
+A000581,Valentin,Perro,Huellitas,Bulldog,Hembra,2025-10-23
+A000930,Lucio,Perro,Huellitas,Chihuahua,Macho,2023-12-30
+A000924,León,Perro,Huellitas,Pastor Alemán,Hembra,2023-11-22
+A000587,Alvaro,Perro,Huellitas,Mestizo,Hembra,2026-03-04
+A000594,Giovanni,Perro,Huellitas,Golden Retriever,Macho,2024-10-07
+A000597,Luz Maria,Perro,Huellitas,Bulldog,Hembra,2026-04-25
+A000905,Julia,Perro,Huellitas,Pastor Alemán,Macho,2020-01-22
+A000605,Lautaro,Perro,Huellitas,Poodle,Hembra,2026-03-13
+A000607,Juan Manuel,Perro,Huellitas,Mestizo,Hembra,2026-03-04
+A000899,Felipe,Perro,Huellitas,Bulldog,Macho,2023-08-05
+A000940,Thiago Benjamin,Perro,Huellitas,Pastor Alemán,Hembra,2024-09-28
+A000618,Santiago,Perro,Huellitas,Beagle,Hembra,2020-02-29
+A000621,Augusto,Perro,Huellitas,Bulldog,Macho,2020-04-22
+A000897,Santiago Benjamin,Perro,Huellitas,Pastor Alemán,Macho,2024-08-18
+A000624,Emanuel,Perro,Huellitas,Labrador,Macho,2023-11-24
+A000884,Vicente,Perro,Huellitas,Chihuahua,Macho,2026-04-03
+A000627,Isabel,Perro,Huellitas,Pastor Alemán,Hembra,2026-02-23
+A000629,Agustina,Perro,Huellitas,Pastor Alemán,Hembra,2026-01-07
+A000880,Delfina,Perro,Huellitas,Poodle,Macho,2022-09-08
+A000871,Julieta,Perro,Huellitas,Poodle,Macho,2026-03-15
+A000632,Ignacio,Perro,Huellitas,Pastor Alemán,Macho,2017-10-04
+A000863,Lucia,Perro,Huellitas,Chihuahua,Macho,2019-10-14
+A000640,Catalina,Perro,Huellitas,Poodle,Macho,2025-11-29
+A000307,Mateo,Perro,Huellitas,Labrador,Hembra,2021-07-14
+A000254,Tomas,Perro,Huellitas,Chihuahua,Macho,2022-02-24
+A000258,Victoria,Perro,Huellitas,Bulldog,Hembra,2023-09-01
+A000262,Bautista,Perro,Huellitas,Chihuahua,Macho,2026-05-12
+A000065,Emilia,Perro,Huellitas,Chihuahua,Hembra,2022-07-19
+A000277,Benjamin,Perro,Huellitas,Golden Retriever,Hembra,2022-07-14
+A000062,Delfina,Perro,Huellitas,Golden Retriever,Macho,2024-07-11
+A000298,Manuel,Perro,Huellitas,Golden Retriever,Macho,2023-08-29
+A000301,Maite,Perro,Huellitas,Beagle,Hembra,2023-05-03
+A000058,Uma,Perro,Huellitas,Golden Retriever,Hembra,2024-02-08
+A000253,Joaquina,Perro,Huellitas,Labrador,Hembra,2025-10-01
+A000311,Lautaro,Perro,Huellitas,Beagle,Macho,2018-09-21
+A000320,Thiago Agustin,Perro,Huellitas,Chihuahua,Hembra,2021-04-29
+A000323,Morena Jazmin,Perro,Huellitas,Beagle,Macho,2022-01-15
+A000325,Ludmila,Perro,Huellitas,Bulldog,Macho,2024-05-21
+A000337,Santino Benjamin,Perro,Huellitas,Chihuahua,Macho,2022-02-10
+A000341,Thiago Benjamin,Perro,Huellitas,Labrador,Macho,2025-07-15
+A000343,Mora,Perro,Huellitas,Poodle,Hembra,2026-02-05
+A000358,Mateo Benjamin,Perro,Huellitas,Pastor Alemán,Macho,2024-07-18
+A000177,Sebastian,Perro,Huellitas,Golden Retriever,Hembra,2021-01-23
+A000123,Facundo,Perro,Huellitas,Poodle,Hembra,2023-10-14
+A000133,Maria Victoria,Perro,Huellitas,Labrador,Hembra,2024-07-01
+A000140,Josefina,Perro,Huellitas,Mestizo,Macho,2024-09-26
+A000141,Thiago Benjamin,Perro,Huellitas,Beagle,Macho,2025-03-01
+A000149,Felipe,Perro,Huellitas,Chihuahua,Hembra,2025-12-15
+A000113,Tiziano Benjamin,Perro,Huellitas,Pastor Alemán,Macho,2019-11-12
+A000107,Julia,Perro,Huellitas,Mestizo,Hembra,2025-03-29
+A000160,Thiago Benjamin,Perro,Huellitas,Poodle,Hembra,2021-11-07
+A000174,Gonzalo,Perro,Huellitas,Golden Retriever,Hembra,2025-06-23
+A000003,Salvador,Perro,Huellitas,Mestizo,Macho,2025-07-22
+A000184,Valentina,Perro,Huellitas,Mestizo,Macho,2024-08-14
+A000189,Francisco,Perro,Huellitas,Labrador,Hembra,2022-02-03
+A000096,Josefina,Perro,Huellitas,Golden Retriever,Hembra,2019-11-26
+A000191,Joaquin,Perro,Huellitas,Chihuahua,Macho,2023-05-27
+A000197,Catalina,Perro,Huellitas,Beagle,Macho,2026-01-07
+A000085,Juan Pablo,Perro,Huellitas,Golden Retriever,Hembra,2021-06-15
+A000217,Constanza,Perro,Huellitas,Pastor Alemán,Macho,2024-08-26
+A000080,Santiago,Perro,Huellitas,Poodle,Hembra,2025-12-15
+A000386,Lola,Perro,Huellitas,Beagle,Hembra,2025-02-16
+A000388,Julia,Perro,Huellitas,Poodle,Macho,2026-03-02
+A000018,Guillermina,Perro,Huellitas,Pastor Alemán,Macho,2025-07-17
+A000364,Luz Milagros,Perro,Huellitas,Mestizo,Hembra,2024-06-21
+A000366,Martina,Perro,Huellitas,Chihuahua,Macho,2025-07-30
+A000362,Alma Jazmin,Perro,Huellitas,Mestizo,Hembra,2022-10-24
+A000376,Thiago,Perro,Huellitas,Bulldog,Hembra,2024-04-14
+A000392,Santino,Perro,Huellitas,Beagle,Hembra,2018-12-12
+A000373,Bautista,Perro,Huellitas,Poodle,Macho,2025-07-29
+A000027,Julieta,Perro,Huellitas,Poodle,Macho,2021-03-18
+A000361,Bruno,Perro,Huellitas,Mestizo,Macho,2022-11-23
+A000391,Bautista,Perro,Huellitas,Mestizo,Macho,2025-05-24
+A000026,Constanza,Perro,Huellitas,Labrador,Hembra,2022-11-25
+A000368,Felipe,Perro,Huellitas,Poodle,Macho,2026-05-22
+A000381,Guadalupe,Perro,Huellitas,Beagle,Hembra,2025-11-05
+A000649,Guadalupe,Gato,Patitas Felices,Ragdoll,Hembra,2022-10-25
+A000921,Mateo Valentin,Gato,Patitas Felices,Ragdoll,Macho,2025-12-26
+A000656,Ignacio,Gato,Patitas Felices,Doméstico de pelo corto,Macho,2025-07-09
+A000207,Isabella,Gato,Patitas Felices,Ragdoll,Macho,2024-03-05
+A000023,Ramiro,Gato,Patitas Felices,Maine Coon,Macho,2021-10-25
+A000209,Ciro,Gato,Patitas Felices,Persa,Hembra,2017-09-06
+A000257,Bianca,Gato,Patitas Felices,Bengalí,Macho,2018-09-05
+A000623,Bautista Benjamin,Gato,Patitas Felices,Bengalí,Hembra,2026-01-31
+A000248,Joaquin,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2026-05-29
+A000218,Maximo,Gato,Patitas Felices,Persa,Hembra,2018-03-22
+A000360,Lautaro Nicolas,Gato,Patitas Felices,Maine Coon,Hembra,2025-07-14
+A000900,Renzo,Gato,Patitas Felices,Maine Coon,Hembra,2026-05-07
+A000417,Emma,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2024-05-17
+A000021,Morena,Gato,Patitas Felices,Doméstico de pelo corto,Macho,2022-12-11
+A000666,Josefina,Gato,Patitas Felices,Siamés,Hembra,2022-05-25
+A000989,Agustin,Gato,Patitas Felices,Maine Coon,Hembra,2025-12-17
+A000917,Juan Pablo,Gato,Patitas Felices,Mestizo,Hembra,2022-01-18
+A000907,Lautaro,Gato,Patitas Felices,Siamés,Hembra,2025-11-30
+A000908,Ian Benjamin,Gato,Patitas Felices,Siamés,Hembra,2022-11-20
+A000425,Tobias,Gato,Patitas Felices,Bengalí,Hembra,2025-11-13
+A000727,Agostina,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2021-06-28
+A000726,Benjamin,Gato,Patitas Felices,Bengalí,Hembra,2024-03-31
+A000103,Juana,Gato,Patitas Felices,Ragdoll,Hembra,2025-03-13
+A000735,Ana Paula,Gato,Patitas Felices,Mestizo,Macho,2023-11-11
+A000099,Felipe,Gato,Patitas Felices,Bengalí,Macho,2022-03-20
+A000868,Delfina,Gato,Patitas Felices,Bengalí,Macho,2021-12-01
+A000097,Mateo,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2022-03-15
+A000738,Giuliana,Gato,Patitas Felices,Mestizo,Hembra,2025-05-09
+A000706,Guadalupe,Gato,Patitas Felices,Ragdoll,Hembra,2023-09-04
+A000739,Abigail,Gato,Patitas Felices,Maine Coon,Macho,2026-01-03
+A000379,Constanza,Gato,Patitas Felices,Bengalí,Macho,2019-12-20
+A000700,Lucía,Gato,Patitas Felices,Ragdoll,Macho,2025-12-14
+A000206,Felipe,Gato,Patitas Felices,Maine Coon,Macho,2026-02-28
+A000879,Valentino,Gato,Patitas Felices,Persa,Hembra,2025-06-13
+A000168,Tobias,Gato,Patitas Felices,Maine Coon,Macho,2024-12-15
+A000692,Santino,Gato,Patitas Felices,Mestizo,Hembra,2021-04-01
+A000882,Geronimo,Gato,Patitas Felices,Maine Coon,Macho,2025-09-28
+A000686,Milo,Gato,Patitas Felices,Siamés,Macho,2021-06-04
+A000858,Candela,Gato,Patitas Felices,Maine Coon,Macho,2026-03-29
+A000992,Sofía,Gato,Patitas Felices,Maine Coon,Hembra,2026-04-17
+A000675,Delfina,Gato,Patitas Felices,Ragdoll,Hembra,2025-05-09
+A000747,Joaquin,Gato,Patitas Felices,Ragdoll,Macho,2024-03-19
+A000670,Juan Bautista,Gato,Patitas Felices,Bengalí,Macho,2023-08-18
+A000852,Santiago,Gato,Patitas Felices,Mestizo,Hembra,2025-06-27
+A000126,Tiziano,Gato,Patitas Felices,Persa,Hembra,2021-03-30
+A000798,Lucas Ezequiel,Gato,Patitas Felices,Siamés,Macho,2026-02-27
+A000547,Francisco,Gato,Patitas Felices,Maine Coon,Macho,2026-02-10
+A000948,Nina,Gato,Patitas Felices,Bengalí,Hembra,2026-01-24
+A000545,Thiago Benjamin,Gato,Patitas Felices,Ragdoll,Hembra,2026-05-13
+A000950,Juana,Gato,Patitas Felices,Persa,Macho,2017-12-01
+A000469,Alma,Gato,Patitas Felices,Maine Coon,Hembra,2020-08-22
+A000792,Martina,Gato,Patitas Felices,Bengalí,Macho,2026-05-21
+A000051,Sara,Gato,Patitas Felices,Persa,Hembra,2022-11-12
+A000796,Valentina,Gato,Patitas Felices,Persa,Macho,2026-05-02
+A000336,Bautista,Gato,Patitas Felices,Ragdoll,Macho,2026-04-23
+A000533,Isabella,Gato,Patitas Felices,Maine Coon,Hembra,2025-03-03
+A000473,Isabella,Gato,Patitas Felices,Ragdoll,Macho,2024-12-09
+A000530,Francisca,Gato,Patitas Felices,Siamés,Macho,2025-11-26
+A000066,Ignacio,Gato,Patitas Felices,Maine Coon,Hembra,2025-04-16
+A000527,Martin,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2026-02-13
+A000338,Santino Benjamin,Gato,Patitas Felices,Persa,Macho,2023-04-29
+A000028,Ian,Gato,Patitas Felices,Persa,Macho,2017-01-16
+A000964,Mia Morena,Gato,Patitas Felices,Siamés,Macho,2025-11-27
+A000135,Juan Francisco,Gato,Patitas Felices,Maine Coon,Hembra,2024-04-17
+A000346,Joaquin,Gato,Patitas Felices,Mestizo,Hembra,2021-03-13
+A000042,Juan Ignacio,Gato,Patitas Felices,Persa,Macho,2024-10-27
+A000998,Emma,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2020-03-12
+A000805,Francisco,Gato,Patitas Felices,Siamés,Macho,2016-06-02
+A000500,Juan Manuel,Gato,Patitas Felices,Mestizo,Macho,2021-11-23
+A000030,Agustin,Gato,Patitas Felices,Persa,Hembra,2023-08-16
+A000478,Julia,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2025-12-02
+A000555,Santino Agustin,Gato,Patitas Felices,Bengalí,Macho,2024-02-11
+A000775,Helena,Gato,Patitas Felices,Bengalí,Hembra,2025-10-14
+A000063,Victoria,Gato,Patitas Felices,Maine Coon,Hembra,2022-04-16
+A000453,Thiago Leonel,Gato,Patitas Felices,Doméstico de pelo corto,Hembra,2023-07-13
+A000367,Ana Paula,Gato,Patitas Felices,Doméstico de pelo corto,Macho,2025-07-16
+A000598,Santiago,Gato,Patitas Felices,Maine Coon,Hembra,2022-10-08
+A000152,Lucas,Gato,Patitas Felices,Siamés,Hembra,2018-04-19
+A000926,Lara,Gato,Patitas Felices,Siamés,Macho,2021-06-10
+A000299,Morena Jazmin,Gato,Patitas Felices,Maine Coon,Macho,2025-11-28
+A000259,Manuel,Gato,Patitas Felices,Ragdoll,Macho,2019-05-05
+A000569,Francisco,Gato,Patitas Felices,Siamés,Macho,2023-04-22
+A000304,Francisca,Gato,Patitas Felices,Persa,Macho,2019-10-11
+A000057,Ignacio,Gato,Patitas Felices,Persa,Macho,2025-03-26
+A000055,Francesca,Gato,Patitas Felices,Siamés,Macho,2021-02-27
+A000305,Thiago Leonel,Gato,Patitas Felices,Maine Coon,Macho,2023-10-05
+A000979,Tiziano Benjamin,Gato,Patitas Felices,Siamés,Hembra,2025-06-23
+A000815,Emilia,Perro,Patitas Felices,Golden Retriever,Hembra,2022-07-25
+A000118,Pedro,Perro,Patitas Felices,Poodle,Hembra,2020-04-27
+A000708,Bautista Benjamin,Perro,Patitas Felices,Beagle,Macho,2024-06-16
+A000824,Sofia,Perro,Patitas Felices,Bulldog,Macho,2020-03-05
+A000122,Camila,Perro,Patitas Felices,Pastor Alemán,Macho,2025-06-25
+A000082,Gael,Perro,Patitas Felices,Mestizo,Macho,2023-12-27
+A000860,Agustin,Perro,Patitas Felices,Poodle,Macho,2023-07-06
+A000114,Benjamin,Perro,Patitas Felices,Beagle,Hembra,2022-11-13
+A000109,Juana,Perro,Patitas Felices,Chihuahua,Hembra,2025-02-19
+A000119,Renata,Perro,Patitas Felices,Poodle,Hembra,2025-11-17
+A000819,Alma,Perro,Patitas Felices,Beagle,Macho,2025-07-04
+A000995,Santiago,Perro,Patitas Felices,Poodle,Macho,2023-07-16
+A000104,Felipe,Perro,Patitas Felices,Bulldog,Hembra,2026-02-03
+A000818,Morena Jazmin,Perro,Patitas Felices,Bulldog,Macho,2024-02-07
+A000006,Josefina,Perro,Patitas Felices,Labrador,Hembra,2026-01-15
+A000855,Samuel,Perro,Patitas Felices,Beagle,Macho,2024-06-14
+A000106,Santino Nicolas,Perro,Patitas Felices,Beagle,Hembra,2025-11-21
+A000956,Luciano,Perro,Patitas Felices,Chihuahua,Hembra,2020-12-10
+A000983,Delfina,Perro,Patitas Felices,Poodle,Macho,2021-06-05
+A000931,Carmela,Perro,Patitas Felices,Mestizo,Hembra,2023-12-31
+A000936,Bautista,Perro,Patitas Felices,Labrador,Hembra,2023-05-27
+A000060,Benjamin,Perro,Patitas Felices,Golden Retriever,Macho,2022-10-14
+A000942,Benicio,Perro,Patitas Felices,Poodle,Hembra,2025-03-25
+A000981,Francisco,Perro,Patitas Felices,Chihuahua,Macho,2026-05-09
+A000946,Valentina Jazmin,Perro,Patitas Felices,Poodle,Hembra,2023-07-17
+A000054,Juan Bautista,Perro,Patitas Felices,Poodle,Hembra,2019-01-09
+A000049,Ambar,Perro,Patitas Felices,Golden Retriever,Hembra,2023-01-28
+A000925,Morena,Perro,Patitas Felices,Pastor Alemán,Hembra,2026-04-03
+A000048,Ludmila,Perro,Patitas Felices,Poodle,Hembra,2025-10-18
+A000966,Sofia Belen,Perro,Patitas Felices,Poodle,Hembra,2024-09-29
+A000969,Valentino,Perro,Patitas Felices,Labrador,Hembra,2025-10-26
+A000032,Santiago,Perro,Patitas Felices,Pastor Alemán,Macho,2025-02-05
+A000971,Paloma,Perro,Patitas Felices,Mestizo,Macho,2018-07-15
+A000973,Juan Ignacio,Perro,Patitas Felices,Chihuahua,Hembra,2023-05-08
+A000975,Mora,Perro,Patitas Felices,Beagle,Macho,2026-05-05
+A000977,Juan Cruz,Perro,Patitas Felices,Chihuahua,Hembra,2023-02-19
+A000893,Benjamin,Perro,Patitas Felices,Pastor Alemán,Macho,2020-02-07
+A000864,Gael,Perro,Patitas Felices,Golden Retriever,Hembra,2026-03-16
+A000866,Agustina,Perro,Patitas Felices,Mestizo,Macho,2018-02-03
+A000873,Emma,Perro,Patitas Felices,Chihuahua,Hembra,2025-11-08
+A000876,Ramiro,Perro,Patitas Felices,Poodle,Hembra,2022-06-12
+A000007,Thiago Emanuel,Perro,Patitas Felices,Golden Retriever,Hembra,2021-07-15
+A000089,Ignacio,Perro,Patitas Felices,Mestizo,Macho,2022-11-20
+A000087,Sebastian,Perro,Patitas Felices,Beagle,Hembra,2025-09-27
+A000886,Santino,Perro,Patitas Felices,Bulldog,Hembra,2026-01-24
+A000890,Facundo,Perro,Patitas Felices,Mestizo,Macho,2024-05-12
+A000862,Victoria,Perro,Patitas Felices,Beagle,Macho,2025-11-30
+A000896,Lucía,Perro,Patitas Felices,Poodle,Macho,2025-03-25
+A000898,Dylan,Perro,Patitas Felices,Golden Retriever,Hembra,2023-06-23
+A000020,Emma,Perro,Patitas Felices,Poodle,Hembra,2024-03-29
+A000901,Santiago,Perro,Patitas Felices,Bulldog,Hembra,2022-03-10
+A000909,Augusto,Perro,Patitas Felices,Chihuahua,Macho,2024-04-03
+A000910,Matias,Perro,Patitas Felices,Pastor Alemán,Macho,2021-08-21
+A000916,Manuel,Perro,Patitas Felices,Bulldog,Hembra,2022-12-28
+A000919,Thiago Nicolas,Perro,Patitas Felices,Pastor Alemán,Macho,2019-04-26
+A000570,Agustin,Perro,Patitas Felices,Chihuahua,Macho,2021-02-11
+A000345,Martín,Perro,Patitas Felices,Beagle,Macho,2025-09-11
+A000518,Simon,Perro,Patitas Felices,Poodle,Macho,2026-01-13
+A000528,Ignacio,Perro,Patitas Felices,Beagle,Macho,2021-05-07
+A000534,Emma,Perro,Patitas Felices,Poodle,Hembra,2023-06-21
+A000335,Lautaro Nahuel,Perro,Patitas Felices,Beagle,Macho,2024-08-15
+A000326,Emma,Perro,Patitas Felices,Mestizo,Macho,2025-03-14
+A000541,Ciro,Perro,Patitas Felices,Pastor Alemán,Macho,2026-04-25
+A000543,Bautista Benjamin,Perro,Patitas Felices,Chihuahua,Hembra,2021-12-03
+A000546,Tomàs,Perro,Patitas Felices,Poodle,Hembra,2024-07-21
+A000554,Luz Milagros,Perro,Patitas Felices,Labrador,Hembra,2026-03-11
+A000565,Valentino,Perro,Patitas Felices,Pastor Alemán,Hembra,2026-03-02
+A000567,Matias,Perro,Patitas Felices,Bulldog,Macho,2017-10-09
+A000509,Paulina,Perro,Patitas Felices,Beagle,Hembra,2026-05-29
+A000303,Juliana,Perro,Patitas Felices,Beagle,Macho,2023-09-27
+A000576,Simon,Perro,Patitas Felices,Mestizo,Hembra,2026-06-04
+A000584,Agostina,Perro,Patitas Felices,Pastor Alemán,Macho,2023-08-05
+A000585,Joaquina,Perro,Patitas Felices,Golden Retriever,Hembra,2025-12-19
+A000286,Lautaro,Perro,Patitas Felices,Labrador,Hembra,2025-05-02
+A000278,Santiago,Perro,Patitas Felices,Pastor Alemán,Macho,2021-09-17
+A000269,Benjamin,Perro,Patitas Felices,Chihuahua,Macho,2026-04-25
+A000604,Paulina,Perro,Patitas Felices,Beagle,Macho,2021-05-31
+A000267,Ciro,Perro,Patitas Felices,Beagle,Macho,2019-01-25
+A000606,Priscila,Perro,Patitas Felices,Beagle,Macho,2026-06-01
+A000610,Tomas Benjamin,Perro,Patitas Felices,Beagle,Hembra,2022-05-12
+A000451,Isabella,Perro,Patitas Felices,Pastor Alemán,Macho,2024-05-09
+A000402,Josefina,Perro,Patitas Felices,Golden Retriever,Hembra,2020-04-17
+A000401,Jazmin,Perro,Patitas Felices,Poodle,Macho,2022-05-08
+A000412,Agustin,Perro,Patitas Felices,Bulldog,Macho,2023-07-30
+A000414,Lola,Perro,Patitas Felices,Mestizo,Hembra,2026-01-21
+A000378,Alexander,Perro,Patitas Felices,Golden Retriever,Macho,2021-01-16
+A000377,Martin,Perro,Patitas Felices,Labrador,Hembra,2026-05-07
+A000374,Thiago Benjamin,Perro,Patitas Felices,Chihuahua,Hembra,2019-06-22
+A000436,Valentina ,Perro,Patitas Felices,Chihuahua,Macho,2024-01-04
+A000439,Maria Victoria,Perro,Patitas Felices,Poodle,Hembra,2025-12-20
+A000372,Lautaro Ezequiel,Perro,Patitas Felices,Pastor Alemán,Hembra,2025-06-27
+A000444,Felipe,Perro,Patitas Felices,Golden Retriever,Hembra,2024-09-20
+A000369,Ludmila,Perro,Patitas Felices,Mestizo,Macho,2022-10-24
+A000613,Benjamin,Perro,Patitas Felices,Poodle,Hembra,2023-10-29
+A000459,Benjamin,Perro,Patitas Felices,Pastor Alemán,Macho,2018-04-17
+A000461,Malena,Perro,Patitas Felices,Chihuahua,Hembra,2019-12-02
+A000464,Felipe,Perro,Patitas Felices,Chihuahua,Macho,2024-05-31
+A000477,Lautaro Benjamin,Perro,Patitas Felices,Bulldog,Macho,2025-06-23
+A000359,Simon,Perro,Patitas Felices,Bulldog,Macho,2026-03-29
+A000491,Thiago Daniel,Perro,Patitas Felices,Pastor Alemán,Macho,2024-01-30
+A000494,Julieta,Perro,Patitas Felices,Golden Retriever,Hembra,2026-04-30
+A000357,Alma,Perro,Patitas Felices,Poodle,Hembra,2026-05-02
+A000351,Lara,Perro,Patitas Felices,Chihuahua,Hembra,2019-01-04
+A000502,Constantino,Perro,Patitas Felices,Chihuahua,Hembra,2022-03-17
+A000347,Mora,Perro,Patitas Felices,Beagle,Hembra,2020-04-07
+A000765,Alma,Perro,Patitas Felices,Labrador,Hembra,2024-08-05
+A000183,Zoe Jazmin,Perro,Patitas Felices,Pastor Alemán,Hembra,2022-01-23
+A000718,Valentina,Perro,Patitas Felices,Bulldog,Hembra,2025-07-27
+A000182,Helena,Perro,Patitas Felices,Mestizo,Macho,2020-01-28
+A000725,Victoria,Perro,Patitas Felices,Chihuahua,Hembra,2023-04-03
+A000729,Josefina,Perro,Patitas Felices,Labrador,Macho,2025-12-13
+A000733,Emma,Perro,Patitas Felices,Poodle,Hembra,2025-08-06
+A000166,Helena,Perro,Patitas Felices,Beagle,Macho,2018-04-12
+A000164,Francesca,Perro,Patitas Felices,Pastor Alemán,Macho,2024-12-14
+A000163,Benjamin,Perro,Patitas Felices,Pastor Alemán,Hembra,2020-08-18
+A000162,Juan Bautista,Perro,Patitas Felices,Beagle,Hembra,2023-04-25
+A000758,Maria Belen,Perro,Patitas Felices,Pastor Alemán,Macho,2018-01-09
+A000763,Joaquín,Perro,Patitas Felices,Poodle,Hembra,2021-03-18
+A000715,Matias,Perro,Patitas Felices,Labrador,Hembra,2025-08-03
+A000766,Martina,Perro,Patitas Felices,Chihuahua,Macho,2018-11-09
+A000768,Zoe Valentina,Perro,Patitas Felices,Mestizo,Hembra,2025-08-25
+A000156,Isabella,Perro,Patitas Felices,Chihuahua,Macho,2024-02-20
+A000153,Bautista,Perro,Patitas Felices,Bulldog,Hembra,2024-10-15
+A000150,Lourdes,Perro,Patitas Felices,Poodle,Hembra,2023-06-12
+A000787,Alma,Perro,Patitas Felices,Mestizo,Macho,2025-05-12
+A000797,Maria Victoria,Perro,Patitas Felices,Mestizo,Hembra,2023-11-07
+A000802,Thiago Joaquin,Perro,Patitas Felices,Mestizo,Hembra,2020-10-30
+A000132,Salvador,Perro,Patitas Felices,Chihuahua,Hembra,2026-05-22
+A000808,Catalina,Perro,Patitas Felices,Pastor Alemán,Macho,2023-05-13
+A000130,Paulina,Perro,Patitas Felices,Chihuahua,Hembra,2024-06-09
+A000204,Lucio,Perro,Patitas Felices,Chihuahua,Hembra,2023-05-16
+A000251,Joaquin,Perro,Patitas Felices,Chihuahua,Hembra,2021-04-11
+A000246,Francisco,Perro,Patitas Felices,Poodle,Hembra,2015-09-25
+A000240,Ramiro,Perro,Patitas Felices,Bulldog,Macho,2020-12-01
+A000239,Maximo,Perro,Patitas Felices,Golden Retriever,Hembra,2023-01-28
+A000234,Joaquin,Perro,Patitas Felices,Golden Retriever,Macho,2025-02-04
+A000226,Valentino,Perro,Patitas Felices,Bulldog,Hembra,2025-10-15
+A000225,Francesco,Perro,Patitas Felices,Golden Retriever,Macho,2025-05-11
+A000221,Isabella,Perro,Patitas Felices,Chihuahua,Hembra,2022-03-12
+A000643,Valentino,Perro,Patitas Felices,Labrador,Hembra,2019-08-15
+A000219,Benjamin Ezequiel,Perro,Patitas Felices,Pastor Alemán,Hembra,2017-07-27
+A000660,Maximo,Perro,Patitas Felices,Mestizo,Macho,2023-08-22
+A000664,Facundo,Perro,Patitas Felices,Chihuahua,Hembra,2021-06-25
+A000129,Josefina,Perro,Patitas Felices,Beagle,Hembra,2023-07-17
+A000671,Antonella,Perro,Patitas Felices,Chihuahua,Hembra,2019-11-04
+A000202,Victoria,Perro,Patitas Felices,Poodle,Macho,2022-01-10
+A000190,Olivia,Perro,Patitas Felices,Golden Retriever,Macho,2025-10-20
+A000683,Catalina,Perro,Patitas Felices,Labrador,Macho,2025-07-02
+A000690,Felipe,Perro,Patitas Felices,Mestizo,Macho,2019-08-25
+A000693,Maria Guadalupe,Perro,Patitas Felices,Bulldog,Hembra,2021-05-04
+A000695,Mateo,Perro,Patitas Felices,Labrador,Macho,2023-08-05
+A000698,Lorenzo,Perro,Patitas Felices,Beagle,Macho,2024-03-08
+A000704,Carmela,Perro,Patitas Felices,Pastor Alemán,Hembra,2025-04-04
+A000403,Constanza,Perro,Patitas Felices,Labrador,Macho,2022-11-03
+A000714,Lucía,Perro,Patitas Felices,Bulldog,Hembra,2025-05-09
