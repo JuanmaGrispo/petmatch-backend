@@ -23,6 +23,8 @@ El cluster se levanta con `docker compose up cassandra cassandra-init`.
 """
 
 import os
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
@@ -305,3 +307,150 @@ def solicitudes_por_refugio(shelter_id, status):
         WHERE shelter_id = ? AND status = ?
     """)
     return [_to_dict(r) for r in get_session().execute(stmt, (shelter_id, status))]
+
+
+# ─── Escritura (INSERT con fan-out denormalizado) ───────────────────────────
+
+# Una sentencia de INSERT por tabla del modelo. Igual que en las lecturas, se
+# preparan una sola vez y se cachean por texto vía _prepare().
+_INSERT_CQL = {
+    "eventos_por_usuario": """
+        INSERT INTO eventos_por_usuario
+            (user_id, date, event_id, event_type, pet_id, shelter_id, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    "eventos_por_perro": """
+        INSERT INTO eventos_por_perro
+            (pet_id, date, event_id, event_type, user_id, shelter_id, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    "eventos_por_refugio_y_fecha": """
+        INSERT INTO eventos_por_refugio_y_fecha
+            (shelter_id, date, event_id, event_type, pet_id, user_id, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    "solicitudes_por_usuario": """
+        INSERT INTO solicitudes_por_usuario
+            (user_id, date, event_id, pet_id, shelter_id, status, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    "solicitudes_por_refugio": """
+        INSERT INTO solicitudes_por_refugio
+            (shelter_id, status, date, event_id, user_id, pet_id, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+}
+
+# Los eventos de solicitud/decisión, además de las 3 tablas de eventos,
+# escriben en las 2 tablas especializadas de solicitudes.
+SOLICITUD_EVENT_TYPES = ("solicitud", "decision")
+
+
+def _as_uuid(value):
+    """Acepta un UUID o un str y devuelve siempre un UUID (lanza ValueError si
+    el texto no es un UUID válido — la ruta lo traduce a un 400)."""
+    return value if isinstance(value, UUID) else UUID(str(value))
+
+
+def insert_evento(user_id, pet_id, shelter_id, event_type, details=None, status=None):
+    """
+    Inserta UN evento lógico haciendo el fan-out denormalizado a varias tablas.
+
+    El `event_id` (uuid4) y la `date` (now en UTC) se generan ACÁ, en el
+    backend: el front nunca los provee, así garantizamos unicidad y un timestamp
+    confiable.
+
+    Fan-out (mismo criterio que el seeder):
+        visita / favorito    → eventos_por_usuario, eventos_por_perro,
+                               eventos_por_refugio_y_fecha
+        solicitud / decision → esas 3 + solicitudes_por_usuario,
+                               solicitudes_por_refugio
+
+    Se usan inserts asíncronos individuales (execute_async), NO un BATCH
+    multipartición: cada fila cae en una partición distinta, así que un batch
+    cruzaría nodos y sería un antipatrón. Disparamos todos en paralelo y luego
+    esperamos el resultado de cada uno (propagando el error si alguno falla).
+
+    Devuelve un dict con: event_id (str), date (isoformat) y la lista de
+    nombres de tablas en las que se escribió.
+    """
+    user_id    = _as_uuid(user_id)
+    pet_id     = _as_uuid(pet_id)
+    shelter_id = _as_uuid(shelter_id)
+
+    event_id = uuid4()
+    date     = datetime.now(timezone.utc)
+
+    session = get_session()
+    futures = []
+    tablas  = []
+
+    def _fire(table, params):
+        futures.append(session.execute_async(_prepare(_INSERT_CQL[table]), params))
+        tablas.append(table)
+
+    # 3 tablas de eventos (todos los tipos)
+    _fire("eventos_por_usuario",
+          (user_id, date, event_id, event_type, pet_id, shelter_id, details))
+    _fire("eventos_por_perro",
+          (pet_id, date, event_id, event_type, user_id, shelter_id, details))
+    _fire("eventos_por_refugio_y_fecha",
+          (shelter_id, date, event_id, event_type, pet_id, user_id, details))
+
+    # 2 tablas de solicitud (solo solicitud / decision)
+    if event_type in SOLICITUD_EVENT_TYPES:
+        _fire("solicitudes_por_usuario",
+              (user_id, date, event_id, pet_id, shelter_id, status, details))
+        _fire("solicitudes_por_refugio",
+              (shelter_id, status, date, event_id, user_id, pet_id, details))
+
+    # Esperamos a que terminen todos los inserts asíncronos.
+    for f in futures:
+        f.result()
+
+    return {
+        "event_id": str(event_id),
+        "date": date.isoformat(),
+        "tablas": tablas,
+    }
+
+
+# ─── Consola CQL (ejecutar CQL arbitrario, estilo cqlsh) ────────────────────
+
+def _cell(value):
+    """Serializa un valor de celda a algo JSON-friendly para la consola:
+    uuid/datetime/colecciones/blobs caen a str; los escalares pasan tal cual."""
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if hasattr(value, "isoformat"):   # datetime / date
+        return value.isoformat()
+    return str(value)                 # uuid, set/list/map, Decimal, blob, etc.
+
+
+def run_cql(query: str) -> dict:
+    """
+    Ejecuta una sentencia CQL arbitraria contra el keyspace y devuelve el
+    resultado en forma tabular (columnas + filas), como haría cqlsh.
+
+    Es una consola sin restricciones (SELECT/INSERT/UPDATE/DELETE/DDL): la
+    decisión de exponer todo es deliberada para la demo. Se ejecuta UNA
+    sentencia por vez (el driver no acepta múltiples sentencias separadas por
+    ';'). Los errores de CQL (sintaxis, tabla inexistente, etc.) se propagan
+    para que la ruta los traduzca a un 400 con el mensaje del driver.
+
+    Devuelve:
+        {columns: [...], rows: [[...], ...], row_count: N}
+    Para escrituras/DDL que no devuelven filas, columns=[] y row_count=0.
+    """
+    query = (query or "").strip().rstrip(";").strip()
+    if not query:
+        raise ValueError("query vacía")
+
+    result = get_session().execute(query)
+
+    columns = list(result.column_names or [])
+    rows = [[_cell(getattr(r, col)) for col in columns] for r in result]
+
+    return {"columns": columns, "rows": rows, "row_count": len(rows)}
