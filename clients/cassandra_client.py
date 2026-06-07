@@ -1,5 +1,6 @@
 """
-Cliente Cassandra (Astra DB) para PetMatch — modelo query-driven de 5 tablas.
+Cliente Cassandra (local, vía docker-compose) para PetMatch — modelo
+query-driven de 5 tablas.
 
 Modelo (Chebotko):
     eventos_por_usuario           PK user_id        CK (date DESC, event_id)
@@ -16,13 +17,12 @@ Columnas:
 Las lecturas usan prepared statements cacheados. La serialización a dict
 (uuid -> str, timestamp -> isoformat, claves en minúscula) se hace acá para
 que las rutas solo tengan que jsonify-ar la lista.
+
+Conexión: contact_points + puerto + PlainTextAuthProvider (sin SSL).
+El cluster se levanta con `docker compose up cassandra cassandra-init`.
 """
 
 import os
-import ssl
-import tempfile
-import zipfile
-from pathlib import Path
 
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
@@ -31,61 +31,48 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_BUNDLE = BASE_DIR / "secure-connect-petmatch.zip"
-
-ASTRA_BUNDLE_PATH = os.environ.get("ASTRA_BUNDLE_PATH", str(DEFAULT_BUNDLE))
-TOKEN             = os.environ["ASTRA_TOKEN"]
-KEYSPACE          = os.environ["ASTRA_KEYSPACE"]
+CASSANDRA_HOST     = os.environ.get("CASSANDRA_HOST", "localhost")
+CASSANDRA_PORT     = int(os.environ.get("CASSANDRA_PORT", "9042"))
+CASSANDRA_USER     = os.environ.get("CASSANDRA_USER", "cassandra")
+CASSANDRA_PASSWORD = os.environ.get("CASSANDRA_PASSWORD", "cassandra")
+KEYSPACE           = os.environ.get("CASSANDRA_KEYSPACE", "petmatch")
 
 _session = None
 _prepared: dict[str, object] = {}
 
 
-def _build_ssl_context(bundle_path: Path) -> ssl.SSLContext:
-    # Astra rechaza el handshake TLS 1.3 sobre LibreSSL (macOS), así que
-    # forzamos TLS 1.2 leyendo los certs directamente del bundle.
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
-        with zipfile.ZipFile(bundle_path) as zf:
-            zf.extractall(tmp_path)
-
-        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-        ssl_ctx.maximum_version = ssl.TLSVersion.TLSv1_2
-        ssl_ctx.load_verify_locations(cafile=str(tmp_path / "ca.crt"))
-        ssl_ctx.verify_mode = ssl.CERT_REQUIRED
-        # Astra usa SNI-based routing: el SNI es el host_id (UUID) del nodo,
-        # que no coincide con el CN del certificado. La cadena se sigue
-        # validando contra la CA del bundle, así que es seguro.
-        ssl_ctx.check_hostname = False
-        ssl_ctx.load_cert_chain(
-            certfile=str(tmp_path / "cert"),
-            keyfile=str(tmp_path / "key"),
+def _ensure_keyspace(cluster: Cluster) -> None:
+    """
+    Crea el keyspace si no existe (idempotente). Permite que el cliente
+    funcione aunque alguien levante el contenedor sin haber corrido el
+    servicio `cassandra-init` del compose.
+    """
+    sysctl = cluster.connect()
+    try:
+        sysctl.execute(
+            f"""
+            CREATE KEYSPACE IF NOT EXISTS {KEYSPACE}
+            WITH replication = {{
+                'class': 'SimpleStrategy',
+                'replication_factor': 1
+            }}
+            """
         )
-        return ssl_ctx
+    finally:
+        sysctl.shutdown()
 
 
 def get_session():
     global _session
     if _session is None:
-        bundle_path = Path(ASTRA_BUNDLE_PATH)
-        if not bundle_path.exists():
-            raise FileNotFoundError(
-                f"No se encontró el Secure Connect Bundle en {bundle_path}. "
-                "Definí ASTRA_BUNDLE_PATH en .env o dejá el archivo "
-                "secure-connect-petmatch.zip en la raíz del proyecto."
-            )
-
-        cloud_config = {
-            "secure_connect_bundle": str(bundle_path),
-            "ssl_context": _build_ssl_context(bundle_path),
-        }
-        auth_provider = PlainTextAuthProvider("token", TOKEN)
+        auth_provider = PlainTextAuthProvider(CASSANDRA_USER, CASSANDRA_PASSWORD)
         cluster = Cluster(
-            cloud=cloud_config,
+            contact_points=[CASSANDRA_HOST],
+            port=CASSANDRA_PORT,
             auth_provider=auth_provider,
+            protocol_version=5,
         )
+        _ensure_keyspace(cluster)
         _session = cluster.connect(KEYSPACE)
     return _session
 
