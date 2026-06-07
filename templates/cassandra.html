@@ -1,1056 +1,533 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>PetMatch — Cassandra</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f4f8; color: #222; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PetMatch · pantallas + Cassandra en vivo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+:root{
+  --ink:#241c17;--bg:#f6ede2;--app-bg:#fffaf3;--card:#fff;
+  --peach:#f3a26d;--peach-deep:#e07a3e;--rose:#d56b7c;--sage:#7fa884;
+  --teal:#0f7d8f;--teal-deep:#0a5663;--amber:#e8923a;--coral:#c8472f;--purple:#6b5b95;
+  --line:#e6d8c7;--line-soft:#efe6d9;
+  --term-bg:#15201f;--term-fg:#cfe3df;
+  --visita:#1976d2;--favorito:#c2185b;--solicitud:#e65100;--decision:#6b5b95;
+  --mono:'Space Mono',monospace;--body:'Outfit',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--body);background:var(--bg);color:var(--ink);line-height:1.5}
 
-        /* ── Header ── */
-        header {
-            background: #0f7fa8;
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-        header a { color: rgba(255,255,255,.75); text-decoration: none; font-size: .9rem; }
-        header a:hover { color: white; }
-        header h1 { font-size: 1.3rem; flex: 1; }
-        header .badge {
-            background: rgba(255,255,255,.15);
-            padding: .25rem .65rem;
-            border-radius: 12px;
-            font-size: .75rem;
-        }
+/* HEADER */
+header{padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--app-bg)}
+.logo{font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+.logo .paw{color:var(--peach-deep)}.logo .b2{color:var(--teal)}
+.subtitle{font-size:.8rem;color:#8a7d6e;flex:1;min-width:160px}
+.conn{display:flex;align-items:center;gap:.4rem;font-size:.72rem;background:#f3e8d8;padding:.3rem .7rem;border-radius:14px;color:#8a7d6e}
+.conn .led{width:9px;height:9px;border-radius:50%;background:#e8b04a}
+.conn .led.ok{background:#5fae6e}.conn .led.err{background:#d96b5b}
+.legend{display:flex;gap:.7rem;font-size:.66rem;font-family:var(--mono);color:#8a7d6e;flex-wrap:wrap}
+.legend .d{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:.25rem;vertical-align:middle}
+.legend .d.app{background:var(--peach)}.legend .d.db{background:var(--teal)}
 
-        /* ── Tabs ── */
-        .tabs {
-            display: flex;
-            gap: 0;
-            padding: 1.5rem 2rem 0;
-            flex-wrap: wrap;
-        }
-        .tab {
-            padding: .6rem 1.4rem;
-            cursor: pointer;
-            border-radius: 8px 8px 0 0;
-            font-weight: 600;
-            font-size: .9rem;
-            background: #dde8ef;
-            color: #555;
-            border: 1px solid #c8d8e2;
-            border-bottom: none;
-        }
-        .tab.active { background: white; color: #0f7fa8; }
-        .tab.danger { background: #fbe9e7; color: #b71c1c; border-color: #f4c0b5; margin-left: auto; }
-        .tab.danger.active { background: white; color: #b71c1c; }
+/* TABS top-level */
+.toptabs{display:flex;gap:.3rem;padding:.9rem 1.5rem 0;background:var(--app-bg);border-bottom:1px solid var(--line)}
+.toptab{padding:.55rem 1.2rem;cursor:pointer;border-radius:9px 9px 0 0;font-weight:600;font-size:.86rem;background:#efe2d0;color:#8a7d6e;border:1px solid var(--line);border-bottom:none}
+.toptab.active{background:var(--bg);color:var(--peach-deep)}
+.toptab.danger{margin-left:auto;background:#fbe7e3;color:var(--coral);border-color:#f0c4ba}
+.toptab.danger.active{background:var(--bg)}
 
-        /* ── Content ── */
-        .panel { display: none; padding: 1.5rem 2rem 3rem; }
-        .panel.active { display: block; }
+.view{display:none}.view.active{display:block}
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 1.25rem; }
+/* ───── VIEW: PANTALLAS ───── */
+.wrap{display:flex;min-height:calc(100vh - 116px)}
+.sidebar{width:230px;flex-shrink:0;border-right:1px solid var(--line);padding:1.2rem .8rem;background:var(--app-bg)}
+.sb-group{margin-bottom:1.4rem}
+.sb-group h4{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:#a89a88;margin:0 .6rem .5rem}
+.sb-item{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-radius:9px;cursor:pointer;font-size:.85rem;font-weight:500;color:#5e5345;transition:all .15s;margin-bottom:.15rem}
+.sb-item:hover{background:#f3e8d8}
+.sb-item.on{background:var(--peach);color:#fff;font-weight:600}
+.sb-item .emo{font-size:1.05rem}
+@media(max-width:860px){.sidebar{width:100%;border-right:none;border-bottom:1px solid var(--line);display:flex;gap:1rem;overflow-x:auto}.sb-group{margin-bottom:0}.wrap{flex-direction:column}}
 
-        /* ── Card ── */
-        .card {
-            background: white;
-            border-radius: 0 8px 8px 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.07);
-            overflow: hidden;
-        }
-        .card-header {
-            background: #0f7fa8;
-            color: white;
-            padding: .6rem 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .card-header h3 { font-size: .9rem; font-family: ui-monospace, Menlo, monospace; }
-        .qnum { font-size: .75rem; opacity: .75; }
-        .card-body { padding: 1rem; }
-        .desc { font-size: .82rem; color: #666; margin-bottom: .75rem; }
+.stage{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:980px){.stage{grid-template-columns:1fr}}
 
-        /* ── CQL preview ── */
-        .cql {
-            background: #1e2733;
-            color: #e8eef3;
-            padding: .55rem .75rem;
-            border-radius: 5px;
-            font-family: ui-monospace, Menlo, monospace;
-            font-size: .72rem;
-            line-height: 1.45;
-            margin-bottom: .75rem;
-            white-space: pre-wrap;
-            overflow-x: auto;
-        }
-        .cql .kw  { color: #80cbc4; font-weight: 600; }
-        .cql .col { color: #ffcc80; }
-        .cql .ph  { color: #ffeb3b; background: rgba(255,235,59,.12); padding: 0 .15rem; border-radius: 3px; }
-        .cql .str { color: #c5e1a5; }
+/* APP SIDE */
+.app-side{padding:2rem;display:flex;flex-direction:column;align-items:center;background:
+  radial-gradient(circle at 20% 10%,rgba(243,162,109,.1),transparent 40%),
+  radial-gradient(circle at 80% 90%,rgba(127,168,132,.1),transparent 40%),var(--bg)}
+.phone{width:100%;max-width:380px;background:var(--app-bg);border-radius:26px;box-shadow:0 24px 60px -24px rgba(36,28,23,.4);border:1px solid var(--line);overflow:hidden}
+.phone-top{background:var(--card);padding:.7rem 1.1rem;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:.6rem}
+.phone-top .back{color:#a89a88;font-size:1.1rem}
+.phone-top .ttl{font-weight:700;font-size:.95rem;flex:1}
+.phone-top .av{width:30px;height:30px;border-radius:50%;background:var(--peach);display:grid;place-items:center;color:#fff;font-size:.8rem;font-weight:700}
+.phone-body{padding:1.1rem;min-height:440px;max-height:580px;overflow-y:auto}
+.screen-intro{font-size:.78rem;color:#8a7d6e;margin-bottom:1rem;padding:.6rem .8rem;background:#f3e8d8;border-radius:10px}
 
-        /* ── Form ── */
-        .form-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; align-items: center; }
-        .field-group { flex: 1; min-width: 0; }
-        .field-group > label { display: block; font-size: .7rem; color: #888; margin-bottom: .2rem; text-transform: uppercase; letter-spacing: .04em; }
-        input, select {
-            width: 100%;
-            padding: .42rem .6rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: .82rem;
-            font-family: ui-monospace, Menlo, monospace;
-            background: white;
-        }
-        input:focus, select:focus { outline: none; border-color: #0f7fa8; }
-        .input-with-toggle { display: flex; gap: .25rem; }
-        .input-with-toggle > * { flex: 1; }
-        .toggle-mode {
-            flex: 0 0 auto;
-            width: 30px;
-            padding: 0;
-            background: #eef3f7;
-            border: 1px solid #c8d8e2;
-            color: #555;
-            font-size: .8rem;
-            cursor: pointer;
-        }
-        .toggle-mode:hover { background: #e0eaf1; }
-        .toggle-mode.active { background: #0f7fa8; color: white; border-color: #0f7fa8; }
+/* controls inside app side */
+.controls{width:100%;max-width:380px;margin-top:1rem;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem}
+.controls h5{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:#a89a88;margin-bottom:.6rem}
+.ctl-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end}
+.ctl-fg{flex:1;min-width:90px}
+.ctl-fg label{display:block;font-size:.62rem;color:#a89a88;margin-bottom:.2rem;font-family:var(--mono)}
+.ctl-fg select,.ctl-fg input{width:100%;padding:.4rem .55rem;border:1px solid var(--line);border-radius:7px;font-size:.78rem;font-family:var(--mono);background:#fffdf9;color:var(--ink)}
+.btn{padding:.45rem 1rem;background:var(--peach-deep);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:.8rem;font-family:var(--body);white-space:nowrap}
+.btn:hover{background:#c96528}
+.btn.teal{background:var(--teal)}.btn.teal:hover{background:var(--teal-deep)}
 
-        button.run {
-            padding: .45rem 1rem;
-            background: #0f7fa8;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: .82rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        button.run:hover { background: #0a6a8f; }
-        button.post { background: #e65100; }
-        button.post:hover { background: #bf360c; }
-        button.danger { background: #c62828; }
-        button.danger:hover { background: #8e1a1a; }
-        button.danger:disabled { background: #bdbdbd; cursor: not-allowed; }
+/* feed */
+.feed{display:flex;flex-direction:column;gap:.6rem}
+.fitem{display:flex;gap:.75rem;align-items:center;padding:.7rem;background:var(--card);border:1px solid var(--line-soft);border-radius:13px}
+.fitem .thumb{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:1.5rem;flex-shrink:0}
+.thumb.visita{background:#e3f0fb}.thumb.favorito{background:#fce7ec}.thumb.solicitud{background:#fdeede}.thumb.decision{background:#ece7f4}
+.fitem .info{flex:1;min-width:0}
+.fitem .info .l1{font-weight:600;font-size:.86rem}
+.fitem .info .l2{font-size:.74rem;color:#8a7d6e}
+.fitem .t{font-size:.66rem;color:#a89a88;font-family:var(--mono);white-space:nowrap}
+.statusbadge{font-size:.6rem;font-family:var(--mono);text-transform:uppercase;padding:.1rem .45rem;border-radius:10px;margin-left:.3rem}
+.statusbadge.pendiente{background:#fff2cf;color:#9a6b00}.statusbadge.aprobada{background:#d9f2e0;color:#1f7a44}.statusbadge.rechazada{background:#fadad3;color:#b3261e}
+.req{display:flex;gap:.7rem;align-items:center;padding:.7rem;background:var(--card);border:1px solid var(--line-soft);border-radius:13px}
+.req .who{width:38px;height:38px;border-radius:50%;background:var(--sage);color:#fff;display:grid;place-items:center;font-weight:700;font-size:.8rem}
+.req .info{flex:1}.req .info b{font-size:.84rem}.req .info small{display:block;font-size:.72rem;color:#8a7d6e}
+.empty{color:#b3a795;font-style:italic;font-size:.82rem;text-align:center;padding:2rem 0}
+.loading{color:#a89a88;font-size:.82rem;text-align:center;padding:1.5rem 0}
+.errbox{color:var(--coral);font-size:.8rem;text-align:center;padding:1.5rem 0}
 
-        /* ── Stats chips ── */
-        .stats { display: flex; flex-wrap: wrap; gap: .35rem; margin: .75rem 0 .5rem; }
-        .chip {
-            display: inline-flex;
-            align-items: center;
-            gap: .35rem;
-            background: #e8f4f8;
-            color: #0f7fa8;
-            padding: .25rem .6rem;
-            border-radius: 12px;
-            font-size: .72rem;
-            font-weight: 600;
-        }
-        .chip.total { background: #0f7fa8; color: white; }
-        .chip.visita    { background: #e3f2fd; color: #1565c0; }
-        .chip.favorito  { background: #fce4ec; color: #c2185b; }
-        .chip.solicitud { background: #fff3e0; color: #e65100; }
-        .chip.rechazo   { background: #ffebee; color: #b71c1c; }
-        .chip.pendiente { background: #fff8e1; color: #b28704; }
-        .chip.aprobada  { background: #e8f5e9; color: #2e7d32; }
-        .chip.rechazada { background: #ffebee; color: #b71c1c; }
+/* DB SIDE */
+.db-side{background:var(--term-bg);color:var(--term-fg);padding:2rem;display:flex;flex-direction:column;gap:1.05rem;overflow-y:auto}
+.db-side .kicker{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:#5fae9e}
+.db-side h3{font-size:1.15rem;font-weight:700;color:#fff;line-height:1.25}
+.db-side .why{font-size:.84rem;color:#9fc0ba;background:rgba(95,174,158,.1);border-left:3px solid #5fae9e;padding:.7rem .9rem;border-radius:0 8px 8px 0}
+.db-step{font-family:var(--mono);font-size:.66rem;color:#7e9c96;text-transform:uppercase;letter-spacing:.08em;margin-bottom:-.5rem}
+.cql{font-family:var(--mono);font-size:.78rem;background:#0e1716;border:1px solid #243430;border-radius:10px;padding:1rem;line-height:1.6;white-space:pre-wrap;overflow-x:auto}
+.cql .kw{color:#6fd8c4;font-weight:700}.cql .col{color:#f3c378}.cql .ph{color:#ffe14d;background:rgba(255,225,77,.1);padding:0 .2rem;border-radius:3px}.cql .cm{color:#5a7068;font-style:italic}
+.keytable{border:1px solid #243430;border-radius:10px;overflow:hidden}
+.keytable .kr{display:flex;border-bottom:1px solid #243430}.keytable .kr:last-child{border-bottom:none}
+.keytable .kk{flex:0 0 120px;background:#0e1716;padding:.5rem .7rem;font-family:var(--mono);font-size:.64rem;text-transform:uppercase;color:#7e9c96}
+.keytable .kv{flex:1;padding:.5rem .7rem;font-family:var(--mono);font-size:.76rem}
+.keytable .kv .pk{color:#f08a6e;font-weight:700}.keytable .kv .ck{color:#6fd8c4;font-weight:700}
+.feat{display:inline-block;font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;background:rgba(243,162,109,.15);color:#f3a26d;padding:.2rem .55rem;border-radius:12px}
+/* raw toggle in db side */
+.dbtoggle{display:flex;gap:.3rem}
+.dbtoggle button{font-family:var(--mono);font-size:.66rem;padding:.35rem .7rem;border:1px solid #243430;border-radius:6px;background:#0e1716;color:#7e9c96;cursor:pointer}
+.dbtoggle button.on{background:#5fae9e;color:#0e1716;border-color:#5fae9e;font-weight:700}
+.rawmini{font-family:var(--mono);font-size:.68rem;overflow-x:auto}
+.rawmini table{width:100%;border-collapse:collapse}
+.rawmini th{color:#6fd8c4;text-align:left;padding:.3rem .5rem;border-bottom:1px solid #243430;white-space:nowrap}
+.rawmini td{padding:.28rem .5rem;border-bottom:1px solid #1c2826;color:#cfe3df;word-break:break-all}
 
-        /* ── Result toolbar ── */
-        .result-toolbar {
-            display: flex;
-            gap: .35rem;
-            margin: .4rem 0 .5rem;
-            border-bottom: 1px solid #e5edf2;
-            padding-bottom: .35rem;
-        }
-        .result-toolbar button {
-            background: transparent;
-            border: none;
-            color: #888;
-            font-size: .75rem;
-            font-weight: 600;
-            cursor: pointer;
-            padding: .25rem .6rem;
-            border-radius: 4px;
-        }
-        .result-toolbar button.active { background: #e8f4f8; color: #0f7fa8; }
+/* ───── VIEW: CHEBOTKO ───── */
+.cheb-wrap{padding:2rem;max-width:1100px;margin:0 auto}
+.cheb-intro{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.4rem}
+.cheb-intro h2{font-size:1.15rem;color:var(--teal-deep);margin-bottom:.4rem}
+.cheb-intro p{font-size:.86rem;color:#5e5345}
+.cheb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.1rem}
+.cheb-tbl{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 3px 12px -6px rgba(36,28,23,.3)}
+.cheb-tbl .h{background:var(--teal);color:#fff;padding:.55rem .8rem;font-family:var(--mono);font-size:.8rem;display:flex;justify-content:space-between;align-items:center}
+.cheb-tbl .h .q{font-size:.66rem;background:rgba(255,255,255,.18);padding:.1rem .45rem;border-radius:10px}
+.cheb-tbl .col{display:flex;gap:.5rem;padding:.4rem .8rem;font-family:var(--mono);font-size:.74rem;border-bottom:1px solid var(--line-soft);align-items:center}
+.cheb-tbl .col:last-child{border-bottom:none}
+.cheb-tbl .col .badge{flex:0 0 26px;font-weight:700;text-align:center;border-radius:4px;font-size:.66rem;padding:.05rem 0}
+.cheb-tbl .col .badge.k{background:#fadad3;color:#c8472f}
+.cheb-tbl .col .badge.c{background:#d3eee9;color:#0a5663}
+.cheb-tbl .col .badge.n{background:#efe6d9;color:#a89a88}
+.cheb-tbl .col .role{color:#8a7d6e;font-size:.64rem;margin-left:auto}
+.cheb-tbl .screen{padding:.45rem .8rem;background:#f3e8d8;font-size:.7rem;color:#8a7d6e}
+.cheb-tbl .screen b{color:var(--peach-deep)}
+.cheb-legend{display:flex;gap:1.2rem;margin:1rem 0 1.4rem;font-family:var(--mono);font-size:.72rem;color:#8a7d6e;flex-wrap:wrap}
+.cheb-legend span b{display:inline-block;width:22px;text-align:center;border-radius:4px;margin-right:.35rem}
+.cheb-legend .k b{background:#fadad3;color:#c8472f}.cheb-legend .c b{background:#d3eee9;color:#0a5663}.cheb-legend .n b{background:#efe6d9;color:#a89a88}
+.denorm{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.4rem;margin-top:1.4rem;text-align:center}
+.denorm .evt{display:inline-block;font-family:var(--mono);font-size:.78rem;background:var(--ink);color:#e8eef3;padding:.6rem 1rem;border-radius:8px;margin-bottom:.7rem}
+.denorm .ar{color:var(--amber);font-size:1.2rem;margin:.2rem 0 .7rem}
+.denorm .fan{display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap}
+.denorm .fan span{font-family:var(--mono);font-size:.66rem;background:rgba(15,125,143,.1);color:var(--teal-deep);border:1px solid rgba(15,125,143,.28);padding:.4rem .6rem;border-radius:7px}
+.denorm p{font-size:.82rem;color:#5e5345;margin-top:.9rem}
 
-        /* ── Timeline ── */
-        .timeline { display: flex; flex-direction: column; gap: .4rem; max-height: 420px; overflow-y: auto; }
-        .event {
-            display: flex;
-            gap: .65rem;
-            align-items: flex-start;
-            padding: .55rem .65rem;
-            background: #fafcfd;
-            border-left: 3px solid #ccc;
-            border-radius: 4px;
-        }
-        .event.visita    { border-left-color: #1976d2; }
-        .event.favorito  { border-left-color: #c2185b; }
-        .event.solicitud { border-left-color: #e65100; }
-        .event.rechazo   { border-left-color: #b71c1c; }
-        .event .icon { font-size: 1.25rem; line-height: 1; }
-        .event .meta { flex: 1; min-width: 0; }
-        .event .top { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
-        .event .type { font-weight: 700; font-size: .8rem; text-transform: capitalize; }
-        .event .date { font-size: .72rem; color: #888; }
-        .event .ids {
-            font-family: ui-monospace, Menlo, monospace;
-            font-size: .7rem;
-            color: #666;
-            margin-top: .2rem;
-        }
-        .event .ids span { background: #eef3f7; padding: 0 .35rem; border-radius: 3px; margin-right: .25rem; cursor: help; }
-        .event .details { font-size: .76rem; color: #555; margin-top: .25rem; font-style: italic; }
-        .event .status-pill {
-            font-size: .65rem;
-            font-weight: 700;
-            padding: .1rem .5rem;
-            border-radius: 10px;
-            text-transform: uppercase;
-        }
-        .event .status-pill.pendiente { background: #fff8e1; color: #b28704; }
-        .event .status-pill.aprobada  { background: #e8f5e9; color: #2e7d32; }
-        .event .status-pill.rechazada { background: #ffebee; color: #b71c1c; }
+/* ───── VIEW: MANTENIMIENTO ───── */
+.maint-wrap{padding:2rem;max-width:700px;margin:0 auto}
+.maint{background:var(--card);border:2px solid var(--coral);border-radius:12px;padding:1.5rem 1.75rem}
+.maint h2{color:var(--coral);font-size:1.15rem;margin-bottom:.7rem}
+.maint .wn{background:#fbe7e3;border-left:4px solid var(--coral);padding:.6rem .85rem;font-size:.8rem;color:#a8392a;margin-bottom:1rem;line-height:1.5;border-radius:4px}
+.maint ul{font-size:.82rem;color:#5e5345;margin:.25rem 0 1rem 1.3rem;line-height:1.7}
+.maint .row{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem}
+.maint .row input{width:100px;padding:.4rem .55rem;border:1px solid var(--line);border-radius:7px;font-family:var(--mono)}
+.arm{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;background:#fff3e0;border:1px solid #ffb74d;border-radius:6px;font-size:.82rem;color:#bf6312;margin-bottom:1rem}
+.maint .danger{padding:.55rem 1.1rem;background:var(--coral);color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:700}
+.maint .danger:disabled{background:#cbb;cursor:not-allowed}
+.seed-out{margin-top:1rem;font-size:.8rem}
+.seed-out pre{background:var(--term-bg);color:var(--term-fg);padding:.75rem;border-radius:6px;overflow-x:auto;font-size:.74rem;font-family:var(--mono)}
+.ok-msg{color:#1f7a44;font-weight:700}
 
-        /* ── Raw table ── */
-        .result table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: ui-monospace, Menlo, monospace;
-            font-size: .72rem;
-        }
-        .result th {
-            background: #e8f4f8;
-            color: #0f7fa8;
-            text-align: left;
-            padding: .3rem .5rem;
-            border-bottom: 2px solid #c5dfe8;
-        }
-        .result td {
-            padding: .28rem .5rem;
-            border-bottom: 1px solid #eee;
-            word-break: break-all;
-        }
-
-        .empty { color: #aaa; font-style: italic; font-size: .82rem; }
-        .error { color: #c62828; font-size: .8rem; }
-        .ok-msg { color: #2e7d32; font-size: .82rem; font-weight: 600; }
-        .loading { color: #888; font-size: .8rem; }
-
-        /* ── Chart ── */
-        .chart-wrap { margin-top: .75rem; height: 140px; }
-
-        /* ── Modelo ── */
-        .model-intro { background: white; padding: 1.25rem 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); margin-bottom: 1rem; }
-        .model-intro h2 { font-size: 1.1rem; color: #0f7fa8; margin-bottom: .5rem; }
-        .model-intro p { font-size: .85rem; color: #555; line-height: 1.5; }
-        .mermaid-wrap { background: white; padding: 1.25rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); overflow-x: auto; }
-        .model-table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-        .model-table th, .model-table td { padding: .55rem .85rem; text-align: left; font-size: .8rem; border-bottom: 1px solid #eef3f7; }
-        .model-table th { background: #0f7fa8; color: white; font-weight: 600; }
-        .model-table tr:last-child td { border-bottom: none; }
-        .model-table code { background: #eef3f7; padding: .05rem .35rem; border-radius: 3px; font-size: .75rem; }
-
-        /* ── Mantenimiento ── */
-        .maint-card { background: white; border: 2px solid #c62828; border-radius: 10px; padding: 1.5rem 1.75rem; max-width: 700px; }
-        .maint-card h2 { color: #c62828; font-size: 1.2rem; margin-bottom: .75rem; display: flex; align-items: center; gap: .5rem; }
-        .maint-card .warn { background: #ffebee; border-left: 4px solid #c62828; padding: .65rem .85rem; font-size: .8rem; color: #b71c1c; margin-bottom: 1rem; line-height: 1.5; }
-        .maint-card ul { font-size: .82rem; color: #555; margin: .25rem 0 1rem 1.3rem; line-height: 1.6; }
-        .maint-row { display: flex; align-items: center; gap: .65rem; margin-bottom: .85rem; }
-        .maint-row label { font-size: .85rem; color: #444; }
-        .maint-row input[type="number"] { width: 100px; }
-        .arm-toggle { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; background: #fff3e0; border: 1px solid #ffb74d; border-radius: 6px; font-size: .82rem; color: #e65100; margin-bottom: 1rem; }
-        .seed-result { margin-top: 1rem; font-size: .8rem; }
-        .seed-result pre { background: #1e2733; color: #e8eef3; padding: .75rem; border-radius: 5px; overflow-x: auto; font-size: .75rem; }
-
-        /* ── Insertar panel ── */
-        .insert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem; }
-        .insert-grid .field-group { margin-bottom: .6rem; }
-    </style>
+footer{text-align:center;padding:1.4rem;font-family:var(--mono);font-size:.66rem;color:#a89a88;background:var(--app-bg);border-top:1px solid var(--line)}
+</style>
 </head>
 <body>
 
 <header>
-    <a href="/">← Inicio</a>
-    <h1>Cassandra — PetMatch</h1>
-    <span class="badge" id="samples-badge">Cargando samples…</span>
+  <div class="logo"><span class="paw">🐾 Pet</span><span class="b2">Match</span></div>
+  <div class="subtitle">Pantallas de la app + la consulta Cassandra que las alimenta · datos en vivo</div>
+  <div class="conn"><span class="led" id="led"></span><span id="conn-txt">conectando…</span></div>
+  <div class="legend"><span><span class="d app"></span>la app</span><span><span class="d db"></span>Cassandra</span></div>
 </header>
 
-<div class="tabs">
-    <div class="tab active" data-tab="consultas" onclick="switchTab('consultas', this)">Consultas</div>
-    <div class="tab" data-tab="modelo" onclick="switchTab('modelo', this)">Modelo</div>
-    <div class="tab" data-tab="insertar" onclick="switchTab('insertar', this)">Insertar</div>
-    <div class="tab danger" data-tab="mantenimiento" onclick="switchTab('mantenimiento', this)">Mantenimiento</div>
+<div class="toptabs">
+  <div class="toptab active" data-v="pantallas" onclick="topTab('pantallas',this)">Pantallas</div>
+  <div class="toptab" data-v="chebotko" onclick="topTab('chebotko',this)">Diagrama Chebotko</div>
+  <div class="toptab danger" data-v="mantenimiento" onclick="topTab('mantenimiento',this)">Mantenimiento</div>
 </div>
 
-<!-- ══════════════════ MODELO ══════════════════ -->
-<div id="panel-modelo" class="panel">
-    <div class="model-intro">
-        <h2>Modelo Chebotko — denormalización por consulta</h2>
-        <p>
-            En Cassandra modelamos <em>desde la query</em>: una tabla por cada acceso.
-            Cada evento se escribe en todas las tablas relevantes al mismo tiempo
-            (denormalización). Las flechas indican qué tabla resuelve qué consulta Q1–Q8.
-        </p>
-    </div>
-    <div class="mermaid-wrap">
-        <div class="mermaid">
-flowchart LR
-    subgraph queries [Consultas]
-        Q1[Q1 - eventos de un usuario]
-        Q2[Q2 - eventos de un perro]
-        Q3[Q3 - eventos de un refugio]
-        Q4[Q4 - usuario y perro]
-        Q5[Q5 - eventos por tipo]
-        Q6[Q6 - favoritos por usuario]
-        Q7[Q7 - solicitudes por usuario]
-        Q8[Q8 - refugio en rango fechas]
-    end
-    subgraph tables [Tablas - PK / Clustering]
-        T1["eventos_por_usuario PK user_id CK date DESC"]
-        T2["eventos_por_perro PK pet_id CK date DESC"]
-        T3["eventos_por_refugio PK shelter_id CK date DESC"]
-        T4["eventos_por_usuario_y_perro PK user_id pet_id CK date DESC"]
-        T5["eventos_por_tipo PK event_type CK date DESC"]
-        T6["favoritos_por_usuario PK user_id CK date DESC"]
-        T7["solicitudes_por_usuario PK user_id CK date DESC"]
-        T8["eventos_por_refugio_y_fecha PK shelter_id CK date DESC"]
-    end
-    Q1 --> T1
-    Q2 --> T2
-    Q3 --> T3
-    Q4 --> T4
-    Q5 --> T5
-    Q6 --> T6
-    Q7 --> T7
-    Q8 --> T8
+<!-- ════════ VIEW PANTALLAS ════════ -->
+<div id="view-pantallas" class="view active">
+  <div class="wrap">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="stage">
+      <section class="app-side">
+        <div class="phone">
+          <div class="phone-top"><span class="back">‹</span><span class="ttl" id="ph-title">—</span><span class="av" id="ph-av">A</span></div>
+          <div class="phone-body" id="ph-body"></div>
         </div>
-    </div>
-    <table class="model-table">
-        <thead><tr><th>Tabla</th><th>Partition Key</th><th>Clustering Key</th><th>Resuelve</th></tr></thead>
-        <tbody>
-            <tr><td><code>eventos_por_usuario</code></td><td><code>user_id</code></td><td><code>date DESC</code></td><td>Q1</td></tr>
-            <tr><td><code>eventos_por_perro</code></td><td><code>pet_id</code></td><td><code>date DESC</code></td><td>Q2</td></tr>
-            <tr><td><code>eventos_por_refugio</code></td><td><code>shelter_id</code></td><td><code>date DESC</code></td><td>Q3</td></tr>
-            <tr><td><code>eventos_por_usuario_y_perro</code></td><td><code>(user_id, pet_id)</code></td><td><code>date DESC</code></td><td>Q4</td></tr>
-            <tr><td><code>eventos_por_tipo</code></td><td><code>event_type</code></td><td><code>date DESC</code></td><td>Q5</td></tr>
-            <tr><td><code>favoritos_por_usuario</code></td><td><code>user_id</code></td><td><code>date DESC</code></td><td>Q6</td></tr>
-            <tr><td><code>solicitudes_por_usuario</code></td><td><code>user_id</code></td><td><code>date DESC</code></td><td>Q7</td></tr>
-            <tr><td><code>eventos_por_refugio_y_fecha</code></td><td><code>shelter_id</code></td><td><code>date DESC</code></td><td>Q8 (range)</td></tr>
-        </tbody>
-    </table>
+        <div class="controls" id="controls"></div>
+      </section>
+      <section class="db-side">
+        <div class="kicker">Detrás de la pantalla</div>
+        <h3 id="db-title">—</h3>
+        <div class="why" id="db-why">—</div>
+        <div class="db-step">la query que ejecuta (CQL)</div>
+        <div class="cql" id="db-cql"></div>
+        <div class="db-step">cómo está diseñada la tabla</div>
+        <div class="keytable" id="db-keys"></div>
+        <div id="db-feat"></div>
+        <div class="db-step">resultado de Cassandra</div>
+        <div class="dbtoggle">
+          <button id="tg-abs" class="on" onclick="setView2('abs')">▦ como lo ve la app</button>
+          <button id="tg-raw" onclick="setView2('raw')">▤ filas crudas</button>
+        </div>
+        <div id="db-rawmini"></div>
+      </section>
+    </main>
+  </div>
 </div>
 
-<!-- ══════════════════ CONSULTAS ══════════════════ -->
-<div id="panel-consultas" class="panel active">
-<div class="grid">
-
-    <!-- Q1 -->
-    <div class="card" data-qid="q1">
-        <div class="card-header"><h3>eventos_por_usuario</h3><span class="qnum">Q1</span></div>
-        <div class="card-body">
-            <p class="desc">Todos los eventos de un usuario, por fecha DESC.</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">user_id, date, event_type, pet_id, shelter_id, details</span>
-<span class="kw">FROM</span> eventos_por_usuario
-<span class="kw">WHERE</span> user_id = <span class="ph">:user_id</span>;</div>
-            <form onsubmit="query(event, 'q1')">
-                <div class="form-row">
-                    <div class="field-group" data-field="user_id" data-pool="users"></div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q1"></div>
-        </div>
+<!-- ════════ VIEW CHEBOTKO ════════ -->
+<div id="view-chebotko" class="view">
+  <div class="cheb-wrap">
+    <div class="cheb-intro">
+      <h2>Diagrama Chebotko — una tabla por consulta</h2>
+      <p>Cada tabla nace de una pantalla. Las claves no son iguales en todas: cada una tiene la partition key (K) y clustering key (C↓) que su consulta necesita. El <code>event_id</code> final da unicidad.</p>
     </div>
-
-    <!-- Q2 -->
-    <div class="card" data-qid="q2">
-        <div class="card-header"><h3>eventos_por_perro</h3><span class="qnum">Q2</span></div>
-        <div class="card-body">
-            <p class="desc">Todos los eventos de un perro, por fecha DESC.</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">pet_id, date, event_type, event_id, user_id, shelter_id, details</span>
-<span class="kw">FROM</span> eventos_por_perro
-<span class="kw">WHERE</span> pet_id = <span class="ph">:pet_id</span>;</div>
-            <form onsubmit="query(event, 'q2')">
-                <div class="form-row">
-                    <div class="field-group" data-field="pet_id" data-pool="pets"></div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q2"></div>
-        </div>
+    <div class="cheb-legend">
+      <span class="k"><b>K</b>partition key — define el nodo y el WHERE</span>
+      <span class="c"><b>C↓</b>clustering key — orden / filtro dentro de la partición</span>
+      <span class="n"><b>–</b>columna normal</span>
     </div>
-
-    <!-- Q3 -->
-    <div class="card" data-qid="q3">
-        <div class="card-header"><h3>eventos_por_refugio</h3><span class="qnum">Q3</span></div>
-        <div class="card-body">
-            <p class="desc">Todos los eventos de un refugio, por fecha DESC.</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">shelter_id, date, event_type, event_id, pet_id, user_id, details</span>
-<span class="kw">FROM</span> eventos_por_refugio
-<span class="kw">WHERE</span> shelter_id = <span class="ph">:shelter_id</span>;</div>
-            <form onsubmit="query(event, 'q3')">
-                <div class="form-row">
-                    <div class="field-group" data-field="shelter_id" data-pool="shelters"></div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q3"></div>
-        </div>
+    <div class="cheb-grid" id="cheb-grid"></div>
+    <div class="denorm">
+      <div class="evt">1 evento: "solicitud — Ana → Toby (R1) · 05-jun 10:00"</div>
+      <div class="ar">↓ se escribe simultáneamente en ↓</div>
+      <div class="fan">
+        <span>eventos_por_usuario</span><span>eventos_por_perro</span><span>eventos_por_refugio_y_fecha</span><span>solicitudes_por_usuario</span><span>solicitudes_por_refugio</span>
+      </div>
+      <p>Un INSERT lógico → varias filas físicas. Espacio en disco a cambio de lecturas instantáneas. <b>Eso es la denormalización.</b></p>
     </div>
-
-    <!-- Q4 -->
-    <div class="card" data-qid="q4">
-        <div class="card-header"><h3>eventos_por_usuario_y_perro</h3><span class="qnum">Q4</span></div>
-        <div class="card-body">
-            <p class="desc">Eventos de un usuario sobre un perro específico, por fecha DESC.</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">user_id, pet_id, date, event_type, event_id, shelter_id, details</span>
-<span class="kw">FROM</span> eventos_por_usuario_y_perro
-<span class="kw">WHERE</span> user_id = <span class="ph">:user_id</span> <span class="kw">AND</span> pet_id = <span class="ph">:pet_id</span>;</div>
-            <form onsubmit="query(event, 'q4')">
-                <div class="form-row">
-                    <div class="field-group" data-field="user_id" data-pool="users"></div>
-                    <div class="field-group" data-field="pet_id"  data-pool="pets"></div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q4"></div>
-        </div>
-    </div>
-
-    <!-- Q5 -->
-    <div class="card" data-qid="q5">
-        <div class="card-header"><h3>eventos_por_tipo</h3><span class="qnum">Q5</span></div>
-        <div class="card-body">
-            <p class="desc">Todos los eventos de un tipo, por fecha DESC.</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">event_type, date, event_id, pet_id, user_id, shelter_id, details</span>
-<span class="kw">FROM</span> eventos_por_tipo
-<span class="kw">WHERE</span> event_type = <span class="ph">:event_type</span>;</div>
-            <form onsubmit="query(event, 'q5')">
-                <div class="form-row">
-                    <div class="field-group">
-                        <label>event_type</label>
-                        <select name="event_type" required>
-                            <option value="visita">visita</option>
-                            <option value="favorito">favorito</option>
-                            <option value="solicitud">solicitud</option>
-                            <option value="rechazo">rechazo</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q5"></div>
-        </div>
-    </div>
-
-    <!-- Q6 -->
-    <div class="card" data-qid="q6">
-        <div class="card-header"><h3>favoritos_por_usuario</h3><span class="qnum">Q6</span></div>
-        <div class="card-body">
-            <p class="desc">Perros favoritos de un usuario, por fecha DESC.</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">user_id, date, pet_id, shelter_id, details</span>
-<span class="kw">FROM</span> favoritos_por_usuario
-<span class="kw">WHERE</span> user_id = <span class="ph">:user_id</span>;</div>
-            <form onsubmit="query(event, 'q6')">
-                <div class="form-row">
-                    <div class="field-group" data-field="user_id" data-pool="users"></div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q6"></div>
-        </div>
-    </div>
-
-    <!-- Q7 -->
-    <div class="card" data-qid="q7">
-        <div class="card-header"><h3>solicitudes_por_usuario</h3><span class="qnum">Q7</span></div>
-        <div class="card-body">
-            <p class="desc">Solicitudes de adopción de un usuario, por fecha DESC.</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">user_id, date, event_id, pet_id, shelter_id, status, details</span>
-<span class="kw">FROM</span> solicitudes_por_usuario
-<span class="kw">WHERE</span> user_id = <span class="ph">:user_id</span>;</div>
-            <form onsubmit="query(event, 'q7')">
-                <div class="form-row">
-                    <div class="field-group" data-field="user_id" data-pool="users"></div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q7"></div>
-        </div>
-    </div>
-
-    <!-- Q8 -->
-    <div class="card" data-qid="q8">
-        <div class="card-header"><h3>eventos_por_refugio_y_fecha</h3><span class="qnum">Q8</span></div>
-        <div class="card-body">
-            <p class="desc">Eventos de un refugio en un rango de fechas (range sobre clustering key).</p>
-            <div class="cql"><span class="kw">SELECT</span> <span class="col">shelter_id, date, event_type, event_id, pet_id, user_id, details</span>
-<span class="kw">FROM</span> eventos_por_refugio_y_fecha
-<span class="kw">WHERE</span> shelter_id = <span class="ph">:shelter_id</span>
-  <span class="kw">AND</span> date &gt;= <span class="ph">:from</span> <span class="kw">AND</span> date &lt;= <span class="ph">:to</span>;</div>
-            <form onsubmit="query(event, 'q8')">
-                <div class="form-row">
-                    <div class="field-group" data-field="shelter_id" data-pool="shelters"></div>
-                </div>
-                <div class="form-row">
-                    <div class="field-group"><label>desde</label><input name="from" type="datetime-local" required></div>
-                    <div class="field-group"><label>hasta</label><input name="to" type="datetime-local" required></div>
-                </div>
-                <div class="form-row"><button class="run" type="submit">Ejecutar</button></div>
-            </form>
-            <div class="result" id="r-q8"></div>
-        </div>
-    </div>
-
-</div>
+  </div>
 </div>
 
-<!-- ══════════════════ INSERTAR ══════════════════ -->
-<div id="panel-insertar" class="panel">
-<div class="insert-grid">
-
-    <!-- INSERT evento -->
-    <div class="card">
-        <div class="card-header"><h3>Insertar evento</h3><span class="qnum">→ 6 tablas</span></div>
-        <div class="card-body">
-            <p class="desc">Escribe en las 6 tablas de evento simultáneamente.</p>
-            <form onsubmit="insert(event, '/cassandra/eventos', 'ins-evento')">
-                <div class="field-group" data-field="user_id" data-pool="users"></div>
-                <div class="field-group" data-field="pet_id" data-pool="pets"></div>
-                <div class="field-group" data-field="shelter_id" data-pool="shelters"></div>
-                <div class="field-group">
-                    <label>event_type</label>
-                    <select name="event_type" required>
-                        <option value="visita">visita</option>
-                        <option value="favorito">favorito</option>
-                        <option value="solicitud">solicitud</option>
-                        <option value="rechazo">rechazo</option>
-                    </select>
-                </div>
-                <div class="field-group"><label>date</label><input name="date" type="datetime-local" required></div>
-                <div class="field-group"><label>details</label><input name="details" placeholder="opcional"></div>
-                <div class="form-row" style="margin-top:.75rem">
-                    <button class="run post" type="submit">Insertar</button>
-                </div>
-            </form>
-            <div class="result" id="ins-evento"></div>
-        </div>
+<!-- ════════ VIEW MANTENIMIENTO ════════ -->
+<div id="view-mantenimiento" class="view">
+  <div class="maint-wrap">
+    <div class="maint">
+      <h2>⚠ Zona destructiva — Seeder</h2>
+      <div class="wn">Borra (TRUNCATE) todas las tablas del keyspace <code>petmatch</code> y vuelve a sembrarlas. No se puede deshacer.</div>
+      <ul>
+        <li>Pool fijo de usuarios, perros y refugios.</li>
+        <li><b id="m-n">2000</b> eventos · distribución <b>visita 50% · favorito 20% · solicitud 20% · decision 10%</b>.</li>
+        <li>Fechas en los últimos 365 días · fan-out denormalizado a las 5 tablas.</li>
+      </ul>
+      <div class="row"><label for="seed-n">Cantidad:</label><input id="seed-n" type="number" value="2000" min="1" max="20000" oninput="document.getElementById('m-n').textContent=this.value"></div>
+      <div class="arm"><input id="arm" type="checkbox" onchange="document.getElementById('btn-seed').disabled=!this.checked"><label for="arm"><b>Habilitar acción destructiva</b></label></div>
+      <button id="btn-seed" class="danger" disabled onclick="seed()">🔥 Borrar y sembrar Cassandra</button>
+      <div class="seed-out" id="seed-out"></div>
     </div>
-
-    <!-- INSERT favorito -->
-    <div class="card">
-        <div class="card-header"><h3>Insertar favorito</h3><span class="qnum">→ favoritos_por_usuario</span></div>
-        <div class="card-body">
-            <form onsubmit="insert(event, '/cassandra/favoritos', 'ins-favorito')">
-                <div class="field-group" data-field="user_id" data-pool="users"></div>
-                <div class="field-group" data-field="pet_id" data-pool="pets"></div>
-                <div class="field-group" data-field="shelter_id" data-pool="shelters"></div>
-                <div class="field-group"><label>date</label><input name="date" type="datetime-local" required></div>
-                <div class="field-group"><label>details</label><input name="details" placeholder="opcional"></div>
-                <div class="form-row" style="margin-top:.75rem">
-                    <button class="run post" type="submit">Insertar</button>
-                </div>
-            </form>
-            <div class="result" id="ins-favorito"></div>
-        </div>
-    </div>
-
-    <!-- INSERT solicitud -->
-    <div class="card">
-        <div class="card-header"><h3>Insertar solicitud</h3><span class="qnum">→ solicitudes_por_usuario</span></div>
-        <div class="card-body">
-            <form onsubmit="insert(event, '/cassandra/solicitudes', 'ins-solicitud')">
-                <div class="field-group" data-field="user_id" data-pool="users"></div>
-                <div class="field-group" data-field="pet_id" data-pool="pets"></div>
-                <div class="field-group" data-field="shelter_id" data-pool="shelters"></div>
-                <div class="field-group"><label>date</label><input name="date" type="datetime-local" required></div>
-                <div class="field-group">
-                    <label>status</label>
-                    <select name="status">
-                        <option value="pendiente">pendiente</option>
-                        <option value="aprobada">aprobada</option>
-                        <option value="rechazada">rechazada</option>
-                    </select>
-                </div>
-                <div class="field-group"><label>details</label><input name="details" placeholder="opcional"></div>
-                <div class="form-row" style="margin-top:.75rem">
-                    <button class="run post" type="submit">Insertar</button>
-                </div>
-            </form>
-            <div class="result" id="ins-solicitud"></div>
-        </div>
-    </div>
-
-</div>
+  </div>
 </div>
 
-<!-- ══════════════════ MANTENIMIENTO ══════════════════ -->
-<div id="panel-mantenimiento" class="panel">
-    <div class="maint-card">
-        <h2>⚠ Zona destructiva — Seeder</h2>
-        <div class="warn">
-            Esta operación <strong>borra (TRUNCATE) todas las tablas</strong> del keyspace
-            <code>petmatch</code> y vuelve a sembrarlas. Toda la data actual se pierde y
-            <strong>no se puede deshacer</strong>.
-        </div>
-        <p style="font-size:.85rem; color:#555; margin-bottom:.5rem;">El seed va a:</p>
-        <ul>
-            <li>Generar un pool fijo de <strong>30 usuarios · 50 perros · 10 refugios</strong>.</li>
-            <li>Insertar <strong id="m-n-preview">2000</strong> eventos con distribución
-                <strong>visita 50% · favorito 20% · solicitud 20% · rechazo 10%</strong>.</li>
-            <li>Distribuir las fechas en los últimos 365 días.</li>
-            <li>Escribir cada evento en sus 6–7 tablas usando <code>BatchStatement UNLOGGED</code>.</li>
-        </ul>
-
-        <div class="maint-row">
-            <label for="seed-n">Cantidad de eventos:</label>
-            <input id="seed-n" type="number" value="2000" min="1" max="20000" oninput="document.getElementById('m-n-preview').textContent = this.value">
-        </div>
-
-        <div class="arm-toggle">
-            <input id="arm-destructive" type="checkbox" onchange="document.getElementById('btn-seed').disabled = !this.checked">
-            <label for="arm-destructive"><strong>Habilitar acciones destructivas</strong> (paso 1 de 3)</label>
-        </div>
-
-        <button id="btn-seed" class="run danger" disabled onclick="seedDestructive()">
-            🔥 Borrar y sembrar Cassandra
-        </button>
-        <div class="seed-result" id="seed-result"></div>
-    </div>
-</div>
+<footer>PetMatch · Ingeniería de Datos II — pantalla → query → tabla · consume el backend Flask en vivo</footer>
 
 <script>
-// ════════════════════════════════════════════════════════════════════════════
-//  TABS
-// ════════════════════════════════════════════════════════════════════════════
-function switchTab(name, el) {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
-    el.classList.add('active');
-}
+// ════════════════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════════════════
+const API_BASE='/cassandra';   // ajustá si el backend está en otra URL
 
-// ════════════════════════════════════════════════════════════════════════════
-//  SAMPLE IDS (poblar dropdowns)
-// ════════════════════════════════════════════════════════════════════════════
-window.SAMPLES = { users: [], pets: [], shelters: [] };
-
-const POOL_LABEL = {
-    users:    { label: 'user_id',    icon: '👤' },
-    pets:     { label: 'pet_id',     icon: '🐶' },
-    shelters: { label: 'shelter_id', icon: '🏠' },
+const EP={
+  samples:()=>`${API_BASE}/samples`,
+  actividad:f=>`${API_BASE}/usuarios/${f.user_id}/eventos`,
+  ficha:f=>`${API_BASE}/perros/${f.pet_id}/eventos`,
+  panel:f=>`${API_BASE}/refugios/${f.shelter_id}/eventos?from=${encodeURIComponent(f.from||'')}&to=${encodeURIComponent(f.to||'')}`,
+  solicitudes:f=>`${API_BASE}/usuarios/${f.user_id}/solicitudes`,
+  bandeja:f=>`${API_BASE}/refugios/${f.shelter_id}/solicitudes?status=${f.status||'pendiente'}`,
+  seed:()=>`${API_BASE}/seed`,
 };
 
-function truncUUID(u) {
-    if (!u || u.length < 13) return u;
-    return u.slice(0, 8) + '…' + u.slice(-4);
+const ICON={visita:{i:'🐾',l:'Visita'},favorito:{i:'❤️',l:'Favorito'},solicitud:{i:'📨',l:'Solicitud'},decision:{i:'⚖️',l:'Decisión'}};
+const VERB={visita:'Visita a',favorito:'Favorito:',solicitud:'Solicitud de',decision:'Decisión sobre'};
+
+// ════════════════════════════════════════════════════════════════
+//  SAMPLES
+// ════════════════════════════════════════════════════════════════
+let SAMPLES={users:[],pets:[],shelters:[]};
+const trunc=u=>(!u||(''+u).length<13)?u:(''+u).slice(0,8)+'…'+(''+u).slice(-4);
+
+async function loadSamples(){
+  const led=document.getElementById('led'),txt=document.getElementById('conn-txt');
+  try{
+    const res=await fetch(EP.samples());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    SAMPLES=await res.json();
+    led.className='led ok';txt.textContent='conectado';
+  }catch(e){
+    led.className='led err';txt.textContent='sin conexión — mostrá Mantenimiento o revisá el backend';
+  }
+  renderScreen();
 }
 
-function renderFieldGroup(groupEl) {
-    const field = groupEl.dataset.field;
-    const pool = groupEl.dataset.pool;
-    const meta = POOL_LABEL[pool];
-    const ids = window.SAMPLES[pool] || [];
-
-    const options = ids.length
-        ? ids.map(u => `<option value="${u}">${meta.icon} ${truncUUID(u)}</option>`).join('')
-        : '<option value="" disabled>sin samples (corré el seeder)</option>';
-
-    groupEl.innerHTML = `
-        <label>${meta.label}</label>
-        <div class="input-with-toggle">
-            <select name="${field}" data-mode="select" required>${options}</select>
-            <button type="button" class="toggle-mode" title="Modo manual (tipear UUID)"
-                onclick="toggleManual(this)">✎</button>
-        </div>`;
-}
-
-function toggleManual(btn) {
-    const wrap = btn.parentElement;
-    const current = wrap.querySelector('[name]');
-    const isSelect = current.tagName === 'SELECT';
-    const name = current.getAttribute('name');
-    const value = current.value;
-
-    const replacement = document.createElement(isSelect ? 'input' : 'select');
-    replacement.setAttribute('name', name);
-    replacement.required = true;
-    replacement.dataset.mode = isSelect ? 'manual' : 'select';
-
-    if (isSelect) {
-        replacement.placeholder = 'UUID manual';
-        replacement.value = value || '';
-        btn.classList.add('active');
-        btn.title = 'Volver al dropdown';
-        btn.textContent = '↺';
-    } else {
-        const pool = wrap.parentElement.dataset.pool;
-        const ids = window.SAMPLES[pool] || [];
-        replacement.innerHTML = ids
-            .map(u => `<option value="${u}">${POOL_LABEL[pool].icon} ${truncUUID(u)}</option>`)
-            .join('');
-        btn.classList.remove('active');
-        btn.title = 'Modo manual (tipear UUID)';
-        btn.textContent = '✎';
-    }
-    current.replaceWith(replacement);
-}
-
-async function loadSamples() {
-    const badge = document.getElementById('samples-badge');
-    try {
-        const res = await fetch('/cassandra/samples');
-        window.SAMPLES = await res.json();
-        const total = window.SAMPLES.users.length
-                    + window.SAMPLES.pets.length
-                    + window.SAMPLES.shelters.length;
-        badge.textContent = `${window.SAMPLES.users.length}u · ${window.SAMPLES.pets.length}p · ${window.SAMPLES.shelters.length}s`;
-        if (!total) badge.textContent = 'Sin samples (correr seeder)';
-    } catch (e) {
-        badge.textContent = 'Sin conexión';
-    }
-    document.querySelectorAll('.field-group[data-pool]').forEach(renderFieldGroup);
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  QUERY HANDLERS
-// ════════════════════════════════════════════════════════════════════════════
-const QUERY_URLS = {
-    q1: f => `/cassandra/q1/usuarios/${f.user_id}/eventos`,
-    q2: f => `/cassandra/q2/perros/${f.pet_id}/eventos`,
-    q3: f => `/cassandra/q3/refugios/${f.shelter_id}/eventos`,
-    q4: f => `/cassandra/q4/usuarios/${f.user_id}/perros/${f.pet_id}/eventos`,
-    q5: f => `/cassandra/q5/tipos/${encodeURIComponent(f.event_type)}/eventos`,
-    q6: f => `/cassandra/q6/usuarios/${f.user_id}/favoritos`,
-    q7: f => `/cassandra/q7/usuarios/${f.user_id}/solicitudes`,
-    q8: f => `/cassandra/q8/refugios/${f.shelter_id}/eventos?from=${f.from}&to=${f.to}`,
+// ════════════════════════════════════════════════════════════════
+//  DEFINICIÓN DE PANTALLAS
+// ════════════════════════════════════════════════════════════════
+const SCREENS={
+  actividad:{
+    group:'Soy adoptante', emo:'📋', nav:'Mi actividad',
+    phoneTitle:'Mi actividad', av:'A',
+    intro:'Tu historial completo en PetMatch, de lo más reciente a lo más viejo.',
+    ep:'actividad',
+    controls:[{k:'user_id',pool:'users',label:'usuario'}],
+    renderApp:(rows)=>feed(rows,false),
+    dbTitle:'Historial de un usuario',
+    why:'La pantalla más usada del perfil. Consultamos por user_id. Incluye el favorito como EVENTO; la lista editable de favoritos viviría en Redis.',
+    table:'eventos_por_usuario', pk:'user_id', ck:'date DESC, event_id',
+    feat:'partition key simple + orden por clustering',
+    cql:f=>`<span class="kw">SELECT</span> <span class="col">date, event_type, pet_id, shelter_id, details</span>\n<span class="kw">FROM</span> eventos_por_usuario\n<span class="kw">WHERE</span> user_id = <span class="ph">${f.user_id||':user_id'}</span>;`
+  },
+  ficha:{
+    group:'Soy refugio', emo:'🐶', nav:'Ficha del animal',
+    phoneTitle:'Interés recibido', av:'R',
+    intro:'Quién mostró interés en este perro: visitas, favoritos y solicitudes.',
+    ep:'ficha',
+    controls:[{k:'pet_id',pool:'pets',label:'perro'}],
+    renderApp:(rows)=>feed(rows,true),
+    dbTitle:'Eventos de un perro',
+    why:'El refugio entra a la ficha del animal y quiere ver toda su tracción. Consultamos por pet_id.',
+    table:'eventos_por_perro', pk:'pet_id', ck:'date DESC, event_id',
+    feat:'misma idea que Mi actividad, otra partition key',
+    cql:f=>`<span class="kw">SELECT</span> <span class="col">date, event_type, user_id, shelter_id, details</span>\n<span class="kw">FROM</span> eventos_por_perro\n<span class="kw">WHERE</span> pet_id = <span class="ph">${f.pet_id||':pet_id'}</span>;`
+  },
+  panel:{
+    group:'Soy refugio', emo:'📊', nav:'Panel por fecha',
+    phoneTitle:'Actividad del refugio', av:'R',
+    intro:'Toda la actividad de tus animales en un rango de fechas.',
+    ep:'panel',
+    controls:[{k:'shelter_id',pool:'shelters',label:'refugio'},{k:'from',type:'datetime-local',label:'desde'},{k:'to',type:'datetime-local',label:'hasta'}],
+    renderApp:(rows)=>feed(rows,true),
+    dbTitle:'Eventos de un refugio por rango de fechas',
+    why:'Reportería del refugio: "¿qué pasó esta semana?". La fecha es clustering key, así que pedir un rango es eficiente.',
+    table:'eventos_por_refugio_y_fecha', pk:'shelter_id', ck:'date DESC, event_id',
+    feat:'range query sobre clustering key',
+    cql:f=>`<span class="kw">SELECT</span> <span class="col">date, event_type, pet_id, user_id</span>\n<span class="kw">FROM</span> eventos_por_refugio_y_fecha\n<span class="kw">WHERE</span> shelter_id = <span class="ph">${f.shelter_id||':shelter_id'}</span>\n  <span class="kw">AND</span> date &gt;= <span class="ph">${f.from||':from'}</span> <span class="kw">AND</span> date &lt;= <span class="ph">${f.to||':to'}</span>;`
+  },
+  solicitudes:{
+    group:'Soy adoptante', emo:'📨', nav:'Mis solicitudes',
+    phoneTitle:'Mis solicitudes', av:'A',
+    intro:'Las adopciones que pediste, con el estado de cada una.',
+    ep:'solicitudes',
+    controls:[{k:'user_id',pool:'users',label:'usuario'}],
+    renderApp:(rows)=>solList(rows),
+    dbTitle:'Solicitudes de un usuario',
+    why:'Solicitudes de un usuario, recientes primero. El filtro por estado se hace del lado app para preservar el orden por fecha.',
+    table:'solicitudes_por_usuario', pk:'user_id', ck:'date DESC, event_id',
+    feat:'tabla especializada · orden por fecha',
+    cql:f=>`<span class="kw">SELECT</span> <span class="col">date, pet_id, shelter_id, status</span>\n<span class="kw">FROM</span> solicitudes_por_usuario\n<span class="kw">WHERE</span> user_id = <span class="ph">${f.user_id||':user_id'}</span>;`
+  },
+  bandeja:{
+    group:'Soy refugio', emo:'📥', nav:'Bandeja',
+    phoneTitle:'Solicitudes a responder', av:'R',
+    intro:'Las solicitudes pendientes que llegaron a tu refugio.',
+    ep:'bandeja',
+    controls:[{k:'shelter_id',pool:'shelters',label:'refugio'},{k:'status',opts:['pendiente','aprobada','rechazada'],label:'estado'}],
+    renderApp:(rows)=>reqList(rows),
+    dbTitle:'Solicitudes de un refugio por estado',
+    why:'La cola de trabajo del refugio. Partition por shelter_id; el estado está en la clustering key, así que filtrar por pendiente es barato (sin ALLOW FILTERING).',
+    table:'solicitudes_por_refugio', pk:'shelter_id', ck:'status, date DESC, event_id',
+    feat:'filtro por status vía clustering key',
+    cql:f=>`<span class="kw">SELECT</span> <span class="col">date, user_id, pet_id, status</span>\n<span class="kw">FROM</span> solicitudes_por_refugio\n<span class="kw">WHERE</span> shelter_id = <span class="ph">${f.shelter_id||':shelter_id'}</span>\n  <span class="kw">AND</span> status = <span class="ph">'${f.status||'pendiente'}'</span>;`
+  },
 };
 
-// Qué dimensiones mostrar por query
-const QUERY_DIMS = {
-    q1: { showType: true,  showStatus: false, chart: 'month' },
-    q2: { showType: true,  showStatus: false, chart: 'month' },
-    q3: { showType: true,  showStatus: false, chart: 'month' },
-    q4: { showType: true,  showStatus: false, chart: 'month' },
-    q5: { showType: false, showStatus: false, chart: 'month' },
-    q6: { showType: false, showStatus: false, chart: 'month' },
-    q7: { showType: false, showStatus: true,  chart: 'status' },
-    q8: { showType: true,  showStatus: false, chart: 'month' },
-};
+// ── render helpers (lado app) ──
+function feed(rows,showUser){
+  if(!rows||!rows.length)return '<div class="empty">Sin actividad.</div>';
+  return `<div class="feed">${rows.map(e=>{
+    const m=ICON[e.event_type]||{i:'•',l:e.event_type};
+    const st=e.status?`<span class="statusbadge ${e.status}">${e.status}</span>`:'';
+    return `<div class="fitem"><div class="thumb ${e.event_type}">${m.i}</div>
+      <div class="info"><div class="l1">${m.l} ${st}</div>
+      <div class="l2">${showUser&&e.user_id?'👤 '+trunc(e.user_id)+' · ':''}${e.pet_id?'🐶 '+trunc(e.pet_id):''}</div></div>
+      <div class="t">${fmtShort(e.date)}</div></div>`;
+  }).join('')}</div>`;
+}
+function solList(rows){
+  if(!rows||!rows.length)return '<div class="empty">Sin solicitudes.</div>';
+  return `<div class="feed">${rows.map(e=>`<div class="fitem"><div class="thumb solicitud">📨</div>
+    <div class="info"><div class="l1">🐶 ${trunc(e.pet_id)} <span class="statusbadge ${e.status||'pendiente'}">${e.status||'pendiente'}</span></div>
+    <div class="l2">${e.shelter_id?'🏠 '+trunc(e.shelter_id):''}</div></div>
+    <div class="t">${fmtShort(e.date)}</div></div>`).join('')}</div>`;
+}
+function reqList(rows){
+  if(!rows||!rows.length)return '<div class="empty">No hay solicitudes con ese estado. 🎉</div>';
+  return `<div class="feed">${rows.map(e=>`<div class="req"><div class="who">${(''+(e.user_id||'?')).slice(0,1).toUpperCase()}</div>
+    <div class="info"><b>👤 ${trunc(e.user_id)}</b> quiere a <b>🐶 ${trunc(e.pet_id)}</b><small>${fmtLong(e.date)} ${e.details?'· '+e.details:''}</small></div>
+    <span class="statusbadge ${e.status||'pendiente'}">${e.status||'pendiente'}</span></div>`).join('')}</div>`;
+}
+function fmtShort(d){if(!d)return '';const x=new Date(d);return isNaN(x)?(''+d).slice(5,16):(x.getDate()+'/'+(x.getMonth()+1));}
+function fmtLong(d){if(!d)return '';const x=new Date(d);return isNaN(x)?d:x.toLocaleString('es-AR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const EVENT_META = {
-    visita:    { icon: '🐾', label: 'Visita' },
-    favorito:  { icon: '❤️', label: 'Favorito' },
-    solicitud: { icon: '📨', label: 'Solicitud' },
-    rechazo:   { icon: '❌', label: 'Rechazo' },
-};
+// ════════════════════════════════════════════════════════════════
+//  ESTADO + RENDER
+// ════════════════════════════════════════════════════════════════
+let current='actividad';
+let ctlState={};
+let lastRows=[];
+let view2='abs';
 
-// ── Charts cache ────────────────────────────────────────────────────────────
-const CHART_INSTANCES = {};
+function buildSidebar(){
+  const groups={};
+  Object.entries(SCREENS).forEach(([k,s])=>{(groups[s.group]=groups[s.group]||[]).push([k,s]);});
+  document.getElementById('sidebar').innerHTML=Object.entries(groups).map(([g,items])=>
+    `<div class="sb-group"><h4>${g}</h4>${items.map(([k,s])=>
+      `<div class="sb-item ${k===current?'on':''}" onclick="go('${k}')"><span class="emo">${s.emo}</span>${s.nav}</div>`).join('')}</div>`).join('');
+}
+function go(k){current=k;ctlState={};lastRows=[];renderScreen();}
 
-async function query(event, qid) {
-    event.preventDefault();
-    const form = event.target;
-    const fields = Object.fromEntries(new FormData(form));
-    const resultEl = document.getElementById('r-' + qid);
-    resultEl.innerHTML = '<span class="loading">Consultando…</span>';
-    try {
-        const res = await fetch(QUERY_URLS[qid](fields));
-        const data = await res.json();
-        if (!res.ok) {
-            resultEl.innerHTML = `<span class="error">Error ${res.status}: ${JSON.stringify(data)}</span>`;
-            return;
-        }
-        renderResult(qid, data);
-    } catch (e) {
-        resultEl.innerHTML = `<span class="error">Error: ${e.message}</span>`;
+function buildControls(){
+  const s=SCREENS[current];
+  const fields=s.controls.map(c=>{
+    if(c.pool){
+      const ids=SAMPLES[c.pool]||[];
+      const opts=ids.length?ids.map(v=>`<option value="${v}">${trunc(v)}</option>`).join(''):'<option value="" disabled>sin samples</option>';
+      return `<div class="ctl-fg"><label>${c.label}</label><select data-k="${c.k}">${opts}</select></div>`;
     }
+    if(c.opts)return `<div class="ctl-fg"><label>${c.label}</label><select data-k="${c.k}">${c.opts.map(v=>`<option>${v}</option>`).join('')}</select></div>`;
+    if(c.type)return `<div class="ctl-fg"><label>${c.label}</label><input type="${c.type}" data-k="${c.k}"></div>`;
+    return '';
+  }).join('');
+  document.getElementById('controls').innerHTML=
+    `<h5>Parámetros de la consulta</h5><div class="ctl-row">${fields}<button class="btn teal" onclick="exec()">▶ Ejecutar</button></div>`;
+  document.querySelectorAll('#controls [data-k]').forEach(el=>el.addEventListener('input',()=>{readCtl();updateCql();}));
+  readCtl();
+}
+function readCtl(){ctlState={};document.querySelectorAll('#controls [data-k]').forEach(el=>ctlState[el.dataset.k]=el.value);}
+
+function renderScreen(){
+  const s=SCREENS[current];
+  buildSidebar();
+  document.getElementById('ph-title').textContent=s.phoneTitle;
+  document.getElementById('ph-av').textContent=s.av;
+  document.getElementById('ph-body').innerHTML=`<div class="screen-intro">${s.intro}</div><div class="empty">Elegí parámetros y tocá ▶ Ejecutar</div>`;
+  buildControls();
+  // db side
+  document.getElementById('db-title').textContent=s.dbTitle;
+  document.getElementById('db-why').textContent=s.why;
+  document.getElementById('db-keys').innerHTML=
+    `<div class="kr"><div class="kk">Partition key</div><div class="kv"><span class="pk">${s.pk}</span></div></div>
+     <div class="kr"><div class="kk">Clustering key</div><div class="kv"><span class="ck">${s.ck}</span></div></div>
+     <div class="kr"><div class="kk">Tabla</div><div class="kv">${s.table}</div></div>`;
+  document.getElementById('db-feat').innerHTML=`<span class="feat">⚙ ${s.feat}</span>`;
+  document.getElementById('db-rawmini').innerHTML='<div style="color:#5a7068;font-size:.74rem;font-family:var(--mono)">— ejecutá para ver filas —</div>';
+  updateCql();
+}
+function updateCql(){document.getElementById('db-cql').innerHTML=SCREENS[current].cql(ctlState);}
+
+async function exec(){
+  readCtl();
+  const s=SCREENS[current];
+  document.getElementById('ph-body').innerHTML=`<div class="screen-intro">${s.intro}</div><div class="loading">Consultando Cassandra…</div>`;
+  try{
+    const res=await fetch(EP[s.ep](ctlState));
+    const data=await res.json();
+    if(!res.ok){document.getElementById('ph-body').innerHTML=`<div class="errbox">Error ${res.status}: ${esc(JSON.stringify(data))}</div>`;return;}
+    lastRows=Array.isArray(data)?data:[];
+    paint();
+  }catch(e){
+    document.getElementById('ph-body').innerHTML=`<div class="errbox">Sin conexión con el backend.<br><small>${esc(e.message)}</small></div>`;
+  }
+}
+function paint(){
+  const s=SCREENS[current];
+  document.getElementById('ph-body').innerHTML=`<div class="screen-intro">${s.intro}</div>`+s.renderApp(lastRows);
+  renderRawMini();
+}
+function setView2(v){view2=v;document.getElementById('tg-abs').classList.toggle('on',v==='abs');document.getElementById('tg-raw').classList.toggle('on',v==='raw');renderRawMini();}
+function renderRawMini(){
+  const box=document.getElementById('db-rawmini');
+  if(!lastRows.length){box.innerHTML='<div style="color:#5a7068;font-size:.74rem;font-family:var(--mono)">— sin filas —</div>';return;}
+  if(view2==='abs'){box.innerHTML=`<div style="color:#9fc0ba;font-size:.76rem">La app transforma estas <b>${lastRows.length}</b> filas en la pantalla de la izquierda. Tocá "filas crudas" para ver lo que devuelve Cassandra.</div>`;return;}
+  const keys=Object.keys(lastRows[0]);
+  box.innerHTML=`<div class="rawmini"><table><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${
+    lastRows.slice(0,12).map(r=>`<tr>${keys.map(k=>`<td>${esc(''+(r[k]??''))}</td>`).join('')}</tr>`).join('')}</tbody></table>${lastRows.length>12?`<div style="color:#5a7068;font-size:.7rem;margin-top:.4rem">…y ${lastRows.length-12} más</div>`:''}</div>`;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  RENDER RESULT (stats + toolbar + timeline/table + chart)
-// ════════════════════════════════════════════════════════════════════════════
-function renderResult(qid, data) {
-    const resultEl = document.getElementById('r-' + qid);
-    if (!Array.isArray(data) || data.length === 0) {
-        resultEl.innerHTML = '<span class="empty">Sin resultados</span>';
-        const old = CHART_INSTANCES[qid];
-        if (old) { old.destroy(); delete CHART_INSTANCES[qid]; }
-        return;
-    }
-
-    const stats = computeStats(qid, data);
-
-    resultEl.innerHTML = `
-        ${renderStats(qid, stats)}
-        <div class="result-toolbar">
-            <button class="active" data-view="timeline" onclick="switchView('${qid}', 'timeline', this)">Timeline</button>
-            <button data-view="table" onclick="switchView('${qid}', 'table', this)">Tabla cruda</button>
-        </div>
-        <div class="view-timeline">${renderTimeline(data)}</div>
-        <div class="view-table" style="display:none">${renderTable(data)}</div>
-        <div class="chart-wrap"><canvas id="chart-${qid}"></canvas></div>
-    `;
-    resultEl.dataset.payload = JSON.stringify(data);
-
-    renderChart(qid, data);
+// ════════════════════════════════════════════════════════════════
+//  CHEBOTKO
+// ════════════════════════════════════════════════════════════════
+const CHEB=[
+  {t:'eventos_por_usuario',q:'Mi actividad',cols:[['K','user_id','partition'],['C↓','date','clustering'],['–','event_id','clustering'],['–','event_type',''],['–','pet_id',''],['–','shelter_id',''],['–','details','']]},
+  {t:'eventos_por_perro',q:'Ficha del animal',cols:[['K','pet_id','partition'],['C↓','date','clustering'],['–','event_id','clustering'],['–','event_type',''],['–','user_id',''],['–','shelter_id',''],['–','details','']]},
+  {t:'eventos_por_refugio_y_fecha',q:'Panel por fecha',cols:[['K','shelter_id','partition'],['C↓','date','clustering'],['–','event_id','clustering'],['–','event_type',''],['–','pet_id',''],['–','user_id','']]},
+  {t:'solicitudes_por_usuario',q:'Mis solicitudes',cols:[['K','user_id','partition'],['C↓','date','clustering'],['–','event_id','clustering'],['–','pet_id',''],['–','shelter_id',''],['–','status','']]},
+  {t:'solicitudes_por_refugio',q:'Bandeja',cols:[['K','shelter_id','partition'],['C↓','status','clustering'],['C↓','date','clustering'],['–','event_id','clustering'],['–','user_id',''],['–','pet_id','']]},
+];
+function buildCheb(){
+  document.getElementById('cheb-grid').innerHTML=CHEB.map(tb=>`
+    <div class="cheb-tbl">
+      <div class="h"><span>${tb.t}</span><span class="q">${tb.q}</span></div>
+      ${tb.cols.map(([b,name,role])=>{
+        const cls=b==='K'?'k':b==='C↓'?'c':'n';
+        return `<div class="col"><span class="badge ${cls}">${b}</span>${name}${role?`<span class="role">${role}</span>`:''}</div>`;
+      }).join('')}
+      <div class="screen">pantalla: <b>${tb.q}</b></div>
+    </div>`).join('');
 }
 
-function switchView(qid, view, btn) {
-    const resultEl = document.getElementById('r-' + qid);
-    resultEl.querySelectorAll('.result-toolbar button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    resultEl.querySelector('.view-timeline').style.display = view === 'timeline' ? 'flex' : 'none';
-    resultEl.querySelector('.view-table').style.display    = view === 'table'    ? 'block' : 'none';
+// ════════════════════════════════════════════════════════════════
+//  SEED
+// ════════════════════════════════════════════════════════════════
+async function seed(){
+  if(!document.getElementById('arm').checked)return;
+  const n=parseInt(document.getElementById('seed-n').value,10)||2000;
+  if(!confirm(`¿SEGURO?\n\n1. TRUNCATE de todas las tablas.\n2. Sembrar ${n} eventos.\n\nNo se puede deshacer.`))return;
+  if(prompt('Última confirmación. Tipeá:  BORRAR Y SEMBRAR')!=='BORRAR Y SEMBRAR'){alert('Cancelado.');return;}
+  const btn=document.getElementById('btn-seed'),out=document.getElementById('seed-out');
+  btn.disabled=true;btn.textContent='⏳ Sembrando…';out.innerHTML='<span class="loading">Truncando y generando…</span>';
+  try{
+    const res=await fetch(EP.seed(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'BORRAR Y SEMBRAR',n})});
+    const data=await res.json();
+    if(!res.ok){out.innerHTML=`<span class="errbox">Error: ${esc(JSON.stringify(data))}</span>`;btn.textContent='🔥 Borrar y sembrar Cassandra';return;}
+    out.innerHTML=`<span class="ok-msg">✓ Seed completado</span><pre>${esc(JSON.stringify(data.summary||data,null,2))}</pre>`;
+    btn.textContent='✓ Completado';loadSamples();
+  }catch(e){out.innerHTML=`<span class="errbox">Error de red: ${esc(e.message)}</span>`;btn.textContent='🔥 Borrar y sembrar Cassandra';}
+  finally{document.getElementById('arm').checked=false;}
 }
 
-// ── Stats ───────────────────────────────────────────────────────────────────
-function computeStats(qid, data) {
-    const byType = {};
-    const byStatus = {};
-    let minDate = null, maxDate = null;
-    for (const row of data) {
-        if (row.event_type) byType[row.event_type] = (byType[row.event_type] || 0) + 1;
-        if (row.status)     byStatus[row.status]   = (byStatus[row.status]   || 0) + 1;
-        if (row.date) {
-            const d = new Date(row.date);
-            if (!minDate || d < minDate) minDate = d;
-            if (!maxDate || d > maxDate) maxDate = d;
-        }
-    }
-    return { byType, byStatus, minDate, maxDate, total: data.length };
+// ════════════════════════════════════════════════════════════════
+function topTab(v,el){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.toptab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');el.classList.add('active');
+  if(v==='chebotko')buildCheb();
 }
-
-function renderStats(qid, s) {
-    const dims = QUERY_DIMS[qid];
-    const parts = [`<span class="chip total">${s.total} resultado${s.total !== 1 ? 's' : ''}</span>`];
-
-    if (dims.showType) {
-        for (const [t, n] of Object.entries(s.byType)) {
-            const ic = (EVENT_META[t] || {}).icon || '·';
-            parts.push(`<span class="chip ${t}">${ic} ${t} · ${n}</span>`);
-        }
-    }
-    if (dims.showStatus) {
-        for (const [st, n] of Object.entries(s.byStatus)) {
-            parts.push(`<span class="chip ${st}">${st} · ${n}</span>`);
-        }
-    }
-    if (s.minDate && s.maxDate) {
-        parts.push(`<span class="chip">📅 ${formatDateShort(s.minDate)} → ${formatDateShort(s.maxDate)}</span>`);
-    }
-    return `<div class="stats">${parts.join('')}</div>`;
-}
-
-// ── Timeline ────────────────────────────────────────────────────────────────
-function renderTimeline(data) {
-    return data.map(row => {
-        const meta = EVENT_META[row.event_type] || { icon: '·', label: row.event_type || '—' };
-        const date = row.date ? new Date(row.date) : null;
-        const ids = [];
-        if (row.user_id)    ids.push(`<span title="${row.user_id}">👤 ${truncUUID(row.user_id)}</span>`);
-        if (row.pet_id)     ids.push(`<span title="${row.pet_id}">🐶 ${truncUUID(row.pet_id)}</span>`);
-        if (row.shelter_id) ids.push(`<span title="${row.shelter_id}">🏠 ${truncUUID(row.shelter_id)}</span>`);
-        const status = row.status
-            ? `<span class="status-pill ${row.status}">${row.status}</span>` : '';
-        return `
-            <div class="event ${row.event_type || ''}">
-                <div class="icon">${meta.icon}</div>
-                <div class="meta">
-                    <div class="top">
-                        <span class="type">${meta.label} ${status}</span>
-                        <span class="date" title="${row.date || ''}">${date ? humanDate(date) : '—'}</span>
-                    </div>
-                    <div class="ids">${ids.join(' ')}</div>
-                    ${row.details ? `<div class="details">"${escapeHtml(row.details)}"</div>` : ''}
-                </div>
-            </div>`;
-    }).join('');
-}
-
-// ── Tabla cruda ─────────────────────────────────────────────────────────────
-function renderTable(data) {
-    const keys = Object.keys(data[0]);
-    const ths = keys.map(k => `<th>${k}</th>`).join('');
-    const trs = data.map(row =>
-        '<tr>' + keys.map(k => `<td>${row[k] ?? ''}</td>`).join('') + '</tr>'
-    ).join('');
-    return `<div style="overflow-x:auto"><table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
-}
-
-// ── Chart ───────────────────────────────────────────────────────────────────
-function renderChart(qid, data) {
-    const dims = QUERY_DIMS[qid];
-    const canvas = document.getElementById('chart-' + qid);
-    if (!canvas) return;
-    const old = CHART_INSTANCES[qid];
-    if (old) old.destroy();
-
-    let labels, counts, title;
-    if (dims.chart === 'status') {
-        const byStatus = {};
-        for (const r of data) byStatus[r.status || '—'] = (byStatus[r.status || '—'] || 0) + 1;
-        labels = Object.keys(byStatus);
-        counts = Object.values(byStatus);
-        title = 'Por status';
-    } else {
-        const byMonth = {};
-        for (const r of data) {
-            if (!r.date) continue;
-            const d = new Date(r.date);
-            const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-            byMonth[key] = (byMonth[key] || 0) + 1;
-        }
-        labels = Object.keys(byMonth).sort();
-        counts = labels.map(l => byMonth[l]);
-        title = 'Eventos por mes';
-    }
-
-    CHART_INSTANCES[qid] = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: title,
-                data: counts,
-                backgroundColor: '#0f7fa8',
-                borderRadius: 4,
-            }],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false }, title: { display: true, text: title, font: { size: 11 }, color: '#666' } },
-            scales: {
-                x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                y: { ticks: { font: { size: 10 }, precision: 0 }, beginAtZero: true },
-            },
-        },
-    });
-}
-
-// ── Date helpers ────────────────────────────────────────────────────────────
-function humanDate(d) {
-    const now = new Date();
-    const diffMs = now - d;
-    const diffDays = Math.floor(diffMs / (24 * 3600 * 1000));
-    if (diffDays < 1)   return 'hoy';
-    if (diffDays < 2)   return 'ayer';
-    if (diffDays < 30)  return `hace ${diffDays} días`;
-    if (diffDays < 365) return `hace ${Math.floor(diffDays / 30)} meses`;
-    return formatDateShort(d);
-}
-function formatDateShort(d) {
-    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c =>
-        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  INSERT
-// ════════════════════════════════════════════════════════════════════════════
-async function insert(event, url, resultId) {
-    event.preventDefault();
-    const fields = Object.fromEntries(new FormData(event.target));
-    const resultEl = document.getElementById(resultId);
-    resultEl.innerHTML = '<span class="loading">Insertando…</span>';
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fields),
-        });
-        const data = await res.json();
-        resultEl.innerHTML = res.ok
-            ? `<span class="ok-msg">✓ Insertado correctamente</span>`
-            : `<span class="error">Error: ${JSON.stringify(data)}</span>`;
-    } catch (e) {
-        resultEl.innerHTML = `<span class="error">Error: ${e.message}</span>`;
-    }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  SEED (triple protección)
-// ════════════════════════════════════════════════════════════════════════════
-async function seedDestructive() {
-    const armed = document.getElementById('arm-destructive').checked;
-    if (!armed) return;
-
-    const n = parseInt(document.getElementById('seed-n').value, 10) || 2000;
-
-    // Capa 2: confirm() genérico
-    const ok = confirm(
-        `¿Estás SEGURO?\n\n` +
-        `Esto va a:\n` +
-        `  1. BORRAR (TRUNCATE) todas las tablas de petmatch.\n` +
-        `  2. Sembrar ${n} eventos nuevos.\n\n` +
-        `Esta acción NO se puede deshacer.`
-    );
-    if (!ok) return;
-
-    // Capa 3: prompt() con tipeo exacto
-    const phrase = prompt(
-        `Última confirmación.\n\n` +
-        `Tipeá exactamente la frase:  BORRAR Y SEMBRAR\n` +
-        `(en mayúsculas, sin comillas)`
-    );
-    if (phrase !== 'BORRAR Y SEMBRAR') {
-        alert('Frase incorrecta. Operación cancelada.');
-        return;
-    }
-
-    const btn = document.getElementById('btn-seed');
-    const resultEl = document.getElementById('seed-result');
-    btn.disabled = true;
-    btn.textContent = '⏳ Sembrando, no cierres la pestaña…';
-    resultEl.innerHTML = '<span class="loading">Truncando tablas y generando eventos…</span>';
-
-    try {
-        const res = await fetch('/cassandra/seed', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ confirm: 'BORRAR Y SEMBRAR', n }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            resultEl.innerHTML = `<span class="error">Error: ${JSON.stringify(data)}</span>`;
-            btn.textContent = '🔥 Borrar y sembrar Cassandra';
-            return;
-        }
-        resultEl.innerHTML = `
-            <span class="ok-msg">✓ Seed completado</span>
-            <pre>${escapeHtml(JSON.stringify(data.summary, null, 2))}</pre>`;
-        btn.textContent = '✓ Seed completado';
-        loadSamples();
-    } catch (e) {
-        resultEl.innerHTML = `<span class="error">Error: ${e.message}</span>`;
-        btn.textContent = '🔥 Borrar y sembrar Cassandra';
-    } finally {
-        document.getElementById('arm-destructive').checked = false;
-    }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  INIT
-// ════════════════════════════════════════════════════════════════════════════
-mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true } });
 loadSamples();
 </script>
-
 </body>
 </html>
