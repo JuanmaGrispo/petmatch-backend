@@ -72,12 +72,12 @@ def cargar(r, n):
     for i in range(n):
         animal_id = f"A{10000 + i}"
         nombre = nombres_disponibles[i]
-        visitas_historicas = random.randint(0, 300)
-        visitas_hoy = random.randint(0, min(visitas_historicas, 20))
+        visitas_historicas = random.randint(10, 300)
+        visitas_hoy = 0
         contador_key = f"visitas:animal:{animal_id}"
 
         pipe.hset("animales:mapa", animal_id, nombre)
-        pipe.zadd("ranking:animales", {nombre: visitas_historicas})
+        pipe.zadd("ranking:animales", {animal_id: visitas_historicas})
         pipe.set(contador_key, visitas_hoy, ex=ttl)
 
     pipe.execute()
